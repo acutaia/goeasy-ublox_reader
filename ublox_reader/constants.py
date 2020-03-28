@@ -24,6 +24,9 @@ Constants for Ublox Receiver
     limitations under the License.
 """
 
+# Standard library
+import configparser
+
 # ------------------------------------------------------------------------------
 
 # Module version
@@ -35,21 +38,31 @@ __docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
+# SETTINGS
+
+config = configparser.ConfigParser()
+"""Config object"""
+
+config.read("config.ini")
+"""Read from configuration file"""
+
+# ------------------------------------------------------------------------------
+
 # DATABASE
 
-DB_HOST = "192.168.1.106"  # "130.192.85.219"
+DB_HOST = config.get("POSTGRESQL", "HOST")
 """Database host address"""
 
-DB_PORT = 5432
+DB_PORT = config.getint("POSTGRESQL", "PORT")
 """ Port number to connect to at the server host"""
 
-DB_USER = "pi"
+DB_USER = config.get("POSTGRESQL", "USER")
 """The name of the database role used for authentication"""
 
-DB = "galileo"
+DB = config.get("POSTGRESQL", "DB")
 """The name of the database to connect to"""
 
-DB_PW = "password"
+DB_PW = config.get("POSTGRESQL", "PASSWD")
 """Password to be used for authentication"""
 
 DB_QUERY = 'INSERT INTO public.messages (' \
@@ -68,15 +81,16 @@ DB_QUERY = 'INSERT INTO public.messages (' \
            'raw_ck_b_time,' \
            'timestampmessage_galileo' \
            ') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);'
+"""Query to insert data in the database"""
 
 # ------------------------------------------------------------------------------
 
 # SERIAL
 
-SERIAL_PORT = "/dev/ttyACM0"
+SERIAL_PORT = config.get("SERIAL", "PORT")
 """Serial port used by the Ublox Receiver"""
 
-SERIAL_BAUDRATE = 9600
+SERIAL_BAUDRATE = config.getint("SERIAL", "BAUDRATE")
 """Baudrate of the serial connection"""
 
 # ------------------------------------------------------------------------------
