@@ -40,6 +40,7 @@ __docformat__ = "restructuredtext en"
 
 # SETTINGS
 
+
 config = configparser.ConfigParser()
 """Config object"""
 
@@ -49,6 +50,7 @@ config.read("config.ini")
 # ------------------------------------------------------------------------------
 
 # DATABASE
+
 
 DB_HOST = config.get("POSTGRESQL", "HOST")
 """Database host address"""
@@ -87,6 +89,7 @@ DB_QUERY = 'INSERT INTO public.messages (' \
 
 # SERIAL
 
+
 SERIAL_PORT = config.get("SERIAL", "PORT")
 """Serial port used by the Ublox Receiver"""
 
@@ -97,14 +100,9 @@ SERIAL_BAUDRATE = config.getint("SERIAL", "BAUDRATE")
 
 # UBLOX BYTES
 
+
 DELIMETER = bytes([0xB5, 0x62])
 """Used to filter needed messages from Ublox"""
-
-LSB_MASK = bytes([0x00, 0x00, 0x3F, 0xFF])
-"""Least significant bit mask"""
-
-MSB_MASK = bytes([0xFF, 0xFF, 0xFF, 0xC0])
-"""Most significant bit mask"""
 
 SETUP_BYTES = [
     # DISABLE OTHER MESSAGES

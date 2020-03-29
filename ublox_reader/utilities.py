@@ -26,7 +26,6 @@ Utility methods for Ublox Reader
 # standard library
 import time
 from contextvars import ContextVar
-from .constants import LSB_MASK, MSB_MASK
 
 # ------------------------------------------------------------------------------
 
@@ -40,6 +39,16 @@ __docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
+# BYTES MASK
+
+
+LSB_MASK = bytes([0x00, 0x00, 0x3F, 0xFF])
+"""Least significant bit mask"""
+
+MSB_MASK = bytes([0xFF, 0xFF, 0xFF, 0xC0])
+"""Most significant bit mask"""
+
+# ------------------------------------------------------------------------------
 
 # TIME MESSAGE VARS
 
@@ -75,7 +84,6 @@ timestampMessage_unixHumanReadable = ContextVar("time.timestampMessage_unixHuman
 """Time stamp of unix in a readable format"""
 
 # ------------------------------------------------------------------------------
-
 
 # TIME UTILITIES FUNCTIONS
 
@@ -128,7 +136,6 @@ def adjust_second(seconds: float) -> float:
 
 
 # ------------------------------------------------------------------------------
-
 
 # GALILEO UTILITIES FUNCTIONS
 
