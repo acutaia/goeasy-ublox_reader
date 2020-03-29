@@ -4,7 +4,7 @@ Asynchronous Ublox Receiver
 
 :author: Angelo Cutaia
 :copyright: Copyright 2020, Angelo Cutaia
-:version: 0.0.1
+:version: 1.0.0
 
 ..
 
