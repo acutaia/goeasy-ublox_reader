@@ -26,6 +26,7 @@ Constants for Ublox Receiver
 
 # Standard library
 import configparser
+import os
 
 # ------------------------------------------------------------------------------
 
@@ -38,18 +39,22 @@ __docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
-# SETTINGS
-
+############
+# SETTINGS #
+############
 
 config = configparser.ConfigParser()
 """Config object"""
 
-config.read("config.ini")
+config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'ublox_config.ini'))
 """Read from configuration file"""
 
 # ------------------------------------------------------------------------------
 
-# DATABASE
+
+############
+# DATABASE #
+############
 
 
 DB_HOST = config.get("POSTGRESQL", "HOST")
@@ -87,7 +92,10 @@ DB_QUERY = 'INSERT INTO public.messages (' \
 
 # ------------------------------------------------------------------------------
 
-# SERIAL
+
+##########
+# SERIAL #
+##########
 
 
 SERIAL_PORT = config.get("SERIAL", "PORT")
@@ -98,7 +106,10 @@ SERIAL_BAUDRATE = config.getint("SERIAL", "BAUDRATE")
 
 # ------------------------------------------------------------------------------
 
-# UBLOX BYTES
+
+###############
+# UBLOX BYTES #
+###############
 
 
 DELIMETER = bytes([0xB5, 0x62])

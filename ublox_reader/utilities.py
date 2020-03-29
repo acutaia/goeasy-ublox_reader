@@ -39,7 +39,10 @@ __docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
-# BYTES MASK
+
+##############
+# BYTES MASK #
+##############
 
 
 LSB_MASK = bytes([0x00, 0x00, 0x3F, 0xFF])
@@ -50,7 +53,10 @@ MSB_MASK = bytes([0xFF, 0xFF, 0xFF, 0xC0])
 
 # ------------------------------------------------------------------------------
 
-# TIME MESSAGE VARS
+
+#####################
+# TIME MESSAGE VARS #
+#####################
 
 
 receptionTime = ContextVar("time.receptionTime", default=0)
@@ -85,7 +91,10 @@ timestampMessage_unixHumanReadable = ContextVar("time.timestampMessage_unixHuman
 
 # ------------------------------------------------------------------------------
 
-# TIME UTILITIES FUNCTIONS
+
+############################
+# TIME UTILITIES FUNCTIONS #
+############################
 
 
 def parse_time_message(data: bytes) -> None:
@@ -137,7 +146,10 @@ def adjust_second(seconds: float) -> float:
 
 # ------------------------------------------------------------------------------
 
-# GALILEO UTILITIES FUNCTIONS
+
+###############################
+# GALILEO UTILITIES FUNCTIONS #
+###############################
 
 
 def parse_message(data: bytes) -> tuple:
@@ -225,5 +237,3 @@ def read_auth_bit(data: bytes) -> int:
             ]
         ), 2  # Use 2 cause it's a binary string
     )
-
-
