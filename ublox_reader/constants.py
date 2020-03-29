@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Constants for Ublox Receiver
+Constants for UbloxReceiver
 
 :author: Angelo Cutaia
 :copyright: Copyright 2020, Angelo Cutaia

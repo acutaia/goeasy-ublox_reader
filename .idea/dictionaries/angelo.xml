@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="angelo">
     <words>
+      <w>asyncio</w>
       <w>authbit</w>
       <w>baudrate</w>
       <w>cutaia</w>
@@ -10,11 +11,13 @@
       <w>galwno</w>
       <w>numwords</w>
       <w>passwd</w>
+      <w>postgre</w>
       <w>postgresql</w>
       <w>receptiontime</w>
       <w>svid</w>
       <w>timestampmessage</w>
       <w>ublox</w>
+      <w>uvloop</w>
     </words>
   </dictionary>
 </component>

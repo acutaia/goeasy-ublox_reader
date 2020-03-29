@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Utility methods for Ublox Reader
+Utility methods for Ublox Receiver
 
 :author: Angelo Cutaia
 :copyright: Copyright 2020, Angelo Cutaia
