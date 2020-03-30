@@ -163,7 +163,7 @@ def parse_message(data: bytes) -> tuple:
     # Read all data
     raw_sv_id = data[5]
     # auth bit are encoded in 8 bytes from byte 28 to byte 36
-    raw_auth_bit = read_auth_bit(data[28:36])
+    raw_auth_bits = read_auth_bits(data[28:36])
     raw_num_words = data[8]
     raw_ck_a = data[48]
     raw_ck_b = data[49]
@@ -183,7 +183,7 @@ def parse_message(data: bytes) -> tuple:
         raw_galWno.get(),
         raw_leapS.get(),
         data.hex(),
-        raw_auth_bit,
+        raw_auth_bits,
         raw_sv_id,
         raw_num_words,
         raw_ck_b,
@@ -194,17 +194,17 @@ def parse_message(data: bytes) -> tuple:
     )
 
 
-def read_auth_bit(data: bytes) -> int:
+def read_auth_bits(data: bytes) -> int:
     """
-    Utility function to retrieve only auth bit from the entire data string
+    Utility function to retrieve only auth bits from the entire data string
     @param data: the 8 bytes to analise
-    @return: return only the 40 auth bit as an integer
+    @return: return only the 40 auth bits as an integer
     """
     # Read the MSB and LSB
     lsb_num = data[0:4]
     msb_num = data[4:]
 
-    # Perform bitwise AND in order to isolate only the 40 auth bit
+    # Perform bitwise AND in order to isolate only the 40 auth bits
     lsb_auth = bytes(
         [
             lsb_num[i] & LSB_MASK[i]
