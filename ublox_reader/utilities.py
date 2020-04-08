@@ -102,8 +102,8 @@ def parse_time_message(data: bytes) -> None:
     The time of the message reception is not the same time written
     inside the message. The scope of this function is to analise and
     store the information inside the contextvars
-    @param data: bytes to analise
-    @return: None
+
+    :param data: Bytes to parse
     """
     # Save the time of the message reception
     receptionTime.set(time.time())
@@ -131,8 +131,9 @@ def parse_time_message(data: bytes) -> None:
 def adjust_second(seconds: float) -> float:
     """
     Utility function to adjust reception time
-    @param seconds: time of the received message
-    @return: correct reception time
+
+    :param seconds: Time of the received message
+    :return: Correct reception time
     """
     # TODO: try and test -3 and -2 or -2 and -1
     #  (reception time is more than the real time). Messages are retrived each seconds,
@@ -157,8 +158,9 @@ def parse_message(data: bytes) -> tuple:
     Utility function to extract data from the GALILEO message and
     combine them with the values of the time message stored inside
     the contextvars
-    @param data: bytes to analise
-    @return: elements to insert inside the db
+
+    :param data: Bytes to analise
+    :return: Elements to insert inside the db
     """
     # Read all data
     raw_sv_id = data[5]
@@ -197,8 +199,9 @@ def parse_message(data: bytes) -> tuple:
 def read_auth_bits(data: bytes) -> int:
     """
     Utility function to retrieve only auth bits from the entire data string
-    @param data: the 8 bytes to analise
-    @return: return only the 40 auth bits as an integer
+
+    :param data: The 8 bytes to analise
+    :return: An integer which represents the 40 auth bits
     """
     # Read the MSB and LSB
     lsb_num = data[0:4]

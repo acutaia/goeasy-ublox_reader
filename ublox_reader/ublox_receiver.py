@@ -75,7 +75,8 @@ class UbloxReceiver:
         # type: (uvloop.Loop) -> None
         """
         Set up UbloxReader
-        :param loop: event loop
+
+        :param loop: Asynchronous event loop implementation provided by uvloop
         """
         # serial transmission
         self.serial = None  # type: Optional[SerialReceiver]
@@ -100,7 +101,6 @@ class UbloxReceiver:
         Setup a Ublox Receiver and starts to get the data. In
         case of a keyboard interrupt, stop the Reader and cleanup
         gracefully
-        @return:
         """
         # Get a new instance of the Event Loop
         loop = asyncio.new_event_loop()
@@ -142,7 +142,10 @@ class UbloxReceiver:
         """
         Instantiate a UbloxReceiver instance and setup the serial receiver
         and the connection pool to the db
-        @return: a UbloxReceiver Instance
+
+        :param loop:  Asynchronous event loop implementation provided by uvloop
+        :return: A UbloxReceiver instance, if no exceptions during the setup
+                of the database and of the SerialReceiver, else return None
         """
         # Create an instance of UbloxReader
         self = UbloxReceiver(loop)
@@ -223,7 +226,6 @@ class UbloxReceiver:
         Read data from serial connection until obtain a ublox message.
         Once a message is obtained, put it in the queue of the
         data to parse
-        @return:
         """
         async for message in self.serial.ublox_message():
             # Put the message in a queue to parse it
@@ -237,7 +239,6 @@ class UbloxReceiver:
         of those messages, analyze them in an executor. Parse Galileo data only if
         a Time message was already received.
         Then schedule the storing of useful data in the database
-        @return:
         """
         while not self.receiver_stop.is_set():
             # Get data from the queue
@@ -269,8 +270,8 @@ class UbloxReceiver:
         and check if the insertion is successful then release the
         connection. If all the connection are busy, await for
         a connection to be free.
-        :param data_to_store: data to insert in the database
-        :return:
+
+        :param data_to_store: Data to insert in the database
         """
         try:
             # Take a connection from the pool and execute the query
@@ -298,7 +299,6 @@ class UbloxReceiver:
         # type:() -> None
         """
         Close gracefully all the connections
-        @return:
         """
         # Log the closing of all the connections
         self.logger.info("".join(

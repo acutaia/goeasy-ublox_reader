@@ -4,6 +4,7 @@
       <w>asyncio</w>
       <w>authbit</w>
       <w>baudrate</w>
+      <w>contextvars</w>
       <w>cutaia</w>
       <w>delimeter</w>
       <w>galielo</w>
