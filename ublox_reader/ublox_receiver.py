@@ -167,32 +167,28 @@ class UbloxReceiver:
                 ), timeout=20
             )
             # Database Log
-            self.logger.info("".join(
-                [time.ctime(), ": UbloxReceiver: [Connection]: created a connection pool to ", DB_HOST])
-            )
+            self.logger.info(f"{time.ctime()} : UbloxReceiver: "
+                             f"[Connection]: created a connection pool to {DB_HOST}")
 
         except OSError as error:
             # Log the exception
-            await self.logger.error("".join(
-                [time.ctime(), ": UbloxReceiver: [ConnectionError]: can't connect to the db ", error.strerror])
-            )
+            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
+                                    f"[ConnectionError]: can't connect to the db {error.strerror}")
             # Set flag to stop the reader
             self.receiver_stop.set()
 
         except asyncio.TimeoutError:
             # Log the exception
-            await self.logger.error("".join(
-                [time.ctime(), ": UbloxReceiver: [ConnectionError]: can't connect to the db "])
-            )
+            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
+                                    f"[ConnectionError]: can't connect to the db ")
 
             # Set flag to stop the reader
             self.receiver_stop.set()
 
         except asyncpg.PostgresError as error:
             # Log the exception
-            await self.logger.error("".join(
-                [time.ctime(), ": UbloxReceiver: [DataBaseError]: ", str(error.as_dict())])
-            )
+            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
+                                    f"[DataBaseError]: {str(error.as_dict())}")
 
             # Set event to stop the reader
             self.receiver_stop.set()
@@ -279,21 +275,18 @@ class UbloxReceiver:
             # Check if there was an error storing the data
             if status != "INSERT 0 1":
                 # Log the warning
-                self.logger.warning("".join(
-                    [time.ctime(), ": UbloxReceiver: [DataBase]: [Warning]: error inserting data to db"])
-                )
+                self.logger.warning(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
+                                    f"[Warning]: error inserting data to db")
 
         except asyncpg.PostgresWarning as warning:
             # Log the warning code
-            self.logger.warning("".join(
-                [time.ctime(), ": UbloxReceiver: [DataBase]: [Warning]: ", str(warning.as_dict())])
-            )
+            self.logger.warning(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
+                                f"[Warning]: {str(warning.as_dict())}")
 
         except asyncpg.PostgresError as error:
             # Log the error code
-            self.logger.error("".join(
-                [time.ctime(), ": UbloxReceiver: [DataBase]: [Error]: ", str(error.as_dict())])
-            )
+            self.logger.error(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
+                              f"[Error]: {str(error.as_dict())}")
 
     async def close_all_connections(self):
         # type:() -> None
@@ -301,9 +294,7 @@ class UbloxReceiver:
         Close gracefully all the connections
         """
         # Log the closing of all the connections
-        self.logger.info("".join(
-            [time.ctime(), ": UbloxReceiver: [Connection]: closing all connections"])
-        )
+        self.logger.info(f"\n{time.ctime()} : UbloxReceiver: [Connection]: closing all connections")
 
         # Stop the Reader
         self.receiver_stop.set()
@@ -318,12 +309,8 @@ class UbloxReceiver:
 
         except asyncio.TimeoutError:
             # Timeout expired
-            self.logger.warning("".join(
-                [time.ctime(), ": UbloxReceiver: [Connection]: error closing the pool"])
-            )
+            self.logger.warning(f"{time.ctime()} : UbloxReceiver: [Connection]: error closing the pool")
 
         finally:
             # Log the exit from the application
-            await self.logger.info("".join(
-                [time.ctime(), ": UbloxReceiver: [EXIT]"])
-            )
+            await self.logger.info(f"{time.ctime()} : UbloxReceiver: [EXIT]")

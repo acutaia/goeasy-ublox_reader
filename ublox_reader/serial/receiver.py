@@ -93,12 +93,8 @@ class SerialReceiver(AioSerial):
             self = SerialReceiver(logger, receiver_stop, stop_method, loop)
 
             # SerialReceiver Logs
-            self.logger.info("".join(
-                [time.ctime(), ": UbloxReceiver: [Connection]: connected to ", SERIAL_PORT])
-            )
-            self.logger.info("".join(
-                [time.ctime(), ": UbloxReceiver: [SerialReceiver]: sending setup bytes"])
-            )
+            self.logger.info(f"{time.ctime()} : UbloxReceiver: [Connection]: connected to {SERIAL_PORT}")
+            self.logger.info(f"{time.ctime()} : UbloxReceiver: [SerialReceiver]: sending setup bytes")
 
             # Set up serial communication
             await self.writelines_async(SETUP_BYTES)
@@ -107,9 +103,7 @@ class SerialReceiver(AioSerial):
 
         except SerialException as error:
             # Log the exception
-            await logger.error("".join(
-                [time.ctime(), ": UbloxReceiver: [SerialPortError]: ", error.strerror])
-            )
+            await logger.error(f"{time.ctime()} : UbloxReceiver: [SerialPortError]: {error.strerror}")
             # Set flag to stop the receiver
             receiver_stop.set()
             # Return None
@@ -164,9 +158,8 @@ class SerialReceiver(AioSerial):
         :return: A ublox message
         """
         # Log the beginning fo reading data
-        self.logger.info("".join(
-            [time.ctime(), ": UbloxReceiver: [SerialReceiver]: start reading"])
-        )
+        self.logger.info(f"{time.ctime()} : UbloxReceiver: [SerialReceiver]: start reading")
+
         while not self.receiver_stop.is_set():
             try:
                 # Empty message
@@ -185,8 +178,6 @@ class SerialReceiver(AioSerial):
 
             except SerialException:
                 # Log the exception
-                await self.logger.error("".join(
-                    [time.ctime(), ": UbloxReceiver: [SerialPortError]: read data failed"])
-                )
+                await self.logger.error(f"{time.ctime()} : UbloxReceiver: [SerialPortError]: read data failed")
                 # Close all the connections
                 await self.stop()

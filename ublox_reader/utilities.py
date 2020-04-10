@@ -224,19 +224,17 @@ def read_auth_bits(data: bytes) -> int:
     # Convert the binary string in an integer
     return int(
         # Convert the 40 auth bits in a binary string
-        "".join(
-            [
-                # Beginning of the most significant auth bits
-                bin(msb_auth[3])[2:].zfill(8),
-                bin(msb_auth[2])[2:].zfill(8),
-                bin(msb_auth[1])[2:].zfill(8),
-                # Ending of the most significant auth bits
-                bin(msb_auth[0])[2:].zfill(8)[0:2],
 
-                # Beginning of the least significant auth bits
-                bin(lsb_auth[1])[2:].zfill(8),
-                # Ending of the least significant auth bits
-                bin(lsb_auth[0])[2:].zfill(8)[0:6],
-            ]
-        ), 2  # Use 2 cause it's a binary string
+        # Beginning of the most significant auth bits
+        f"{bin(msb_auth[3])[2:].zfill(8)}"
+        f"{bin(msb_auth[2])[2:].zfill(8)}"
+        f"{bin(msb_auth[1])[2:].zfill(8)}"
+        # Ending of the most significant auth bits
+        f"{bin(msb_auth[0])[2:].zfill(8)[0:2]}"
+
+        # Beginning of the least significant auth bits
+        f"{bin(lsb_auth[1])[2:].zfill(8)}"
+        # Ending of the least significant auth bits
+        f"{bin(lsb_auth[0])[2:].zfill(8)[0:6]}"
+        , 2  # Use 2 cause it's a binary string
     )
