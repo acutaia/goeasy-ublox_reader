@@ -67,6 +67,19 @@ SERIAL_BAUDRATE = config.getint("SERIAL", "BAUDRATE")
 # ------------------------------------------------------------------------------
 
 
+#############
+# EXCEPTION #
+#############
+
+
+class UbloxSerialException(Exception):
+    """Base class for ublox serial errors"""
+    def __init__(self, *args, **kwargs):  # real signature unknown
+        pass
+
+# ------------------------------------------------------------------------------
+
+
 ###############
 # SETUP BYTES #
 ###############
