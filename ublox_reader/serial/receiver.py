@@ -24,9 +24,8 @@ Asynchronous serial receiver for UbloxReader
 """
 
 # Standard library
-import time
-from asyncio import Event
-from typing import AsyncIterable, Optional, Callable
+from datetime import datetime
+from typing import AsyncIterable, Optional
 
 # Asynchronous libraries
 from uvloop import Loop
@@ -60,41 +59,39 @@ class SerialReceiver(AioSerial):
     Ubolox Receiver, reading the data following the
     format of the ublox communication protocol
     """
-    def __init__(self, logger, receiver_stop, stop_method, loop):
-        # type: (Logger, Event, Callable, Loop) -> None
+    def __init__(self, logger, loop, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
+        # type: (Logger, Loop, Optional[str], Optional[int]) -> None
         """
         Setup a SerialReceiver
 
         :param logger: Asynchronous logger
-        :param receiver_stop: Asynchronous event used to stop the receiver
-        :param stop_method: Asynchronous method used to clean the connection
         :param loop: Event loop
+        :param port: Serial port used by the receiver
+        :param baudrate: Baudrate of the connection
         """
-        super().__init__(SERIAL_PORT, SERIAL_BAUDRATE, loop=loop)
+        super().__init__(port=port, baudrate=baudrate, loop=loop)
         self.logger = logger  # type: Logger
-        self.receiver_stop = receiver_stop  # type: Event
-        self.stop = stop_method  # type: Callable
+        # reading flag
+        self.start_reading = False  # type: bool
 
     @classmethod
-    async def setup(cls, logger, receiver_stop, stop_method, loop):
-        # type: (Logger, Event, Callable, Loop) -> Optional[SerialReceiver]
+    async def setup(cls, logger, loop):
+        # type: (Logger, Loop) -> SerialReceiver
         """
         Instantiate a SerialReceiver instance and setup the serial connection
         sending the setup bytes to the ublox receiver
 
         :param logger: UbloxReceiver internal logger
-        :param receiver_stop: UbloxReceiver internal event
-        :param stop_method:  UbloxReceiver close_all_connections method
         :param loop: Event loop
-        :return: A SerialReceiver instance, if no exceptions during the setup, else return None
+        :return: A SerialReceiver instance
         """
         try:
             # Create an instance of SerialReceiver
-            self = SerialReceiver(logger, receiver_stop, stop_method, loop)
+            self = SerialReceiver(logger, loop)
 
             # SerialReceiver Logs
-            self.logger.info(f"{time.ctime()} : UbloxReceiver: [Connection]: connected to {SERIAL_PORT}")
-            self.logger.info(f"{time.ctime()} : UbloxReceiver: [SerialReceiver]: sending setup bytes")
+            self.logger.info(f"{datetime.now()} : INFO : [Serial]: connected to {self.port}")
+            self.logger.info(f"{datetime.now()} : INFO : [Serial]: sending setup bytes")
 
             # Set up serial communication
             await self.writelines_async(SETUP_BYTES)
@@ -103,11 +100,9 @@ class SerialReceiver(AioSerial):
 
         except SerialException as error:
             # Log the exception
-            await logger.error(f"{time.ctime()} : UbloxReceiver: [SerialPortError]: {error.strerror}")
+            await logger.error(f"{datetime.now()} : ERROR : [Serial]: {error.strerror}")
             # Set flag to stop the receiver
-            receiver_stop.set()
-            # Return None
-            return None
+            raise UbloxSerialException
         # Setup made correctly, return self
         return self
 
@@ -116,9 +111,6 @@ class SerialReceiver(AioSerial):
         """
         Asynchronous generator
         that returns a ublox message at every iteration.
-
-        The data are obtained reading bytes from the serial connection until a receiver_stop event is set.
-
 
         Every ublox message frame has this structure:
 
@@ -157,27 +149,38 @@ class SerialReceiver(AioSerial):
 
         :return: A ublox message
         """
-        # Log the beginning fo reading data
-        self.logger.info(f"{time.ctime()} : UbloxReceiver: [SerialReceiver]: start reading")
+        if not self.start_reading:
+            # Log the beginning fo reading data
+            self.logger.info(f"{datetime.now()} : INFO : [Serial]: start reading")
+            # set the flag
+            self.start_reading = True
 
-        while not self.receiver_stop.is_set():
-            try:
-                # Empty message
-                message = bytearray()
+        try:
+            # Empty message
+            message = bytearray()
 
-                # Read the Preamble and discard it cause we don't need it
-                await self.read_async(2)
+            # Read the Preamble and discard it cause we don't need it
+            await self.read_async(2)
 
-                # Save the first useful data (4 bytes)
-                message.extend(await self.read_async(4))
+            # Save the first useful data (4 bytes)
+            message.extend(await self.read_async(4))
 
-                # Save the payload of the message and the two final bytes (checksum)
-                message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
-                # Give the message
-                yield message
+            # Save the payload of the message and the two final bytes (checksum)
+            message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
+            # Give the message
+            yield message
 
-            except SerialException:
-                # Log the exception
-                await self.logger.error(f"{time.ctime()} : UbloxReceiver: [SerialPortError]: read data failed")
-                # Close all the connections
-                await self.stop()
+        except SerialException as error:
+            # Raise exception
+            raise UbloxSerialException(f"{datetime.now()} : ERROR : [Serial]: {error.args[0]}")
+
+    async def stop_serial(self):
+        """
+        Method to stop the SerialReceiver
+        """
+        # Close the serial port
+        self.close()
+        # Shutdown  serial reader  executor
+        self._read_executor.shutdown(wait=False)
+        # Log
+        await self.logger.error(f"{datetime.now()} : INFO : [Serial]: disconnected from {self.port}")
