@@ -24,8 +24,13 @@ Utility methods for Ublox Receiver
 """
 
 # standard library
+import asyncio
 import time
+from typing import Callable
 from contextvars import ContextVar
+# uvloop event loop
+from uvloop import Loop
+
 
 # ------------------------------------------------------------------------------
 
@@ -153,14 +158,16 @@ def adjust_second(seconds: float) -> float:
 ###############################
 
 
-def parse_message(data: bytes) -> tuple:
+def parse_message(store_data: Callable, loop: Loop, data: bytes) -> None:
     """
     Utility function to extract data from the GALILEO message and
     combine them with the values of the time message stored inside
-    the contextvars
+    the contextvars. When the data are obtained, schedule the store_data
+    coroutine in the event loop
 
-    :param data: Bytes to analise
-    :return: Elements to insert inside the db
+    :param store_data: Coroutine to store data
+    :param loop: Event Loop
+    :param data: bytes to analise
     """
     # Read all data
     raw_sv_id = data[5]
@@ -178,21 +185,26 @@ def parse_message(data: bytes) -> tuple:
     #  const reserved2 = data[11]
     #  const size = int.from_bytes(data[2:4], byteorder="little")
 
-    return (
-        receptionTime.get(),
-        timestampMessage_unix.get(),
-        raw_galTow.get(),
-        raw_galWno.get(),
-        raw_leapS.get(),
-        data.hex(),
-        raw_auth_bits,
-        raw_sv_id,
-        raw_num_words,
-        raw_ck_b,
-        raw_ck_a,
-        time_raw_ck_A.get(),
-        time_raw_ck_B.get(),
-        timestampMessage_galileo.get()
+    # Schedule
+    asyncio.run_coroutine_threadsafe(
+        store_data(
+            (
+                receptionTime.get(),
+                timestampMessage_unix.get(),
+                raw_galTow.get(),
+                raw_galWno.get(),
+                raw_leapS.get(),
+                data.hex(),
+                raw_auth_bits,
+                raw_sv_id,
+                raw_num_words,
+                raw_ck_b,
+                raw_ck_a,
+                time_raw_ck_A.get(),
+                time_raw_ck_B.get(),
+                timestampMessage_galileo.get()
+            )
+        ), loop
     )
 
 

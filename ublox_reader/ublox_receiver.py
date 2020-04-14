@@ -35,7 +35,7 @@ import asyncpg
 from aiologger import Logger
 
 # Typing
-from typing import Optional, Union
+from typing import Optional, Union, Callable
 
 # Ublox constants and utilities
 from ublox_reader.constants import*
@@ -94,6 +94,8 @@ class UbloxReceiver:
         self.time_flag = False  # type: bool
         # queue containing the data to parse
         self.data_to_parse = asyncio.Queue()  # type: asyncio.Queue
+        # data_to_store method
+        self.data_to_store = None  # type: Optional[Callable]
 
     @classmethod
     def run(cls):
@@ -196,6 +198,9 @@ class UbloxReceiver:
         # Check if the instantiation of the pool was successful
         if self.pool:
 
+            # Link parse message function to the coroutine to self.store_data and to the event loop
+            self.data_to_store = partial(parse_message, self.store_data, self.loop)
+
             # TODO: create a package for the db
             #  use functools partial to initialize it like the serial connection
 
@@ -244,19 +249,17 @@ class UbloxReceiver:
                 # Set the received time message flag
                 self.time_flag = True
                 # Analyze the message in a executor
-                await self.loop.run_in_executor(self.parse_data_executor, parse_time_message, data)
+                asyncio.ensure_future(self.loop.run_in_executor(self.parse_data_executor, parse_time_message, data))
 
             # This is a GNSS message
             elif data[0] == 2 and self.time_flag:
                 # Check if it's a GALILEO message
                 # {GPS: 0}, {SBUS: 1}, {GALILEO: 2}, {BEIDU: 3}, {IMES: 4}, {QZSS: 5}, {GLONASS: 6}
                 if data[4] == 2:
-                    # Analyze the message in a executor and obtain the data to store in the db
-                    data_to_store = await self.loop.run_in_executor(self.parse_data_executor, parse_message, data)
-                    # Put the data_to_store in a queue
-                    self.loop.create_task(self.store_data(data_to_store))
+                    # Analyze the message in a executor and scheduling the storing of the data
+                    asyncio.ensure_future(self.loop.run_in_executor(self.parse_data_executor, self.data_to_store, data))
 
-            # set data
+            # set the parsing of the data done
             self.data_to_parse.task_done()
 
     async def store_data(self, data_to_store):
