@@ -24,8 +24,9 @@ Asynchronous Ublox Receiver
 """
 
 # Standard library
-import time
 import asyncio
+import signal
+from datetime import datetime
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
@@ -35,13 +36,14 @@ import asyncpg
 from aiologger import Logger
 
 # Typing
-from typing import Optional, Union, Callable
+from typing import Optional, Union, Callable, Dict, Any
 
 # Ublox constants and utilities
 from ublox_reader.constants import*
 from ublox_reader.utilities import parse_time_message, parse_message
 # Ublox serial receiver
 from ublox_reader.serial.receiver import SerialReceiver
+from ublox_reader.serial.constants import UbloxSerialException
 
 
 # Substitute asyncio loop with uvloop
@@ -109,33 +111,33 @@ class UbloxReceiver:
         # Set as the default loop of this thread
         asyncio.set_event_loop(loop)
 
-        # Setup the Reader
-        ublox_reader = loop.run_until_complete(UbloxReceiver.set_up(loop))  # type: UbloxReceiver
+        # OS signals to stop the receiver
+        signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
 
-        # Check if something went wrong during the setup
-        if not ublox_reader:
-            # Stop and close the Event Loop
-            loop.stop()
+        try:
+            # Setup the Reader
+            ublox_reader = loop.run_until_complete(UbloxReceiver.set_up(loop))  # type: UbloxReceiver
+        except (Exception, UbloxSerialException):
+            loop.run_until_complete(UbloxReceiver.shut_down())
             loop.close()
             return
 
-        # Schedule get_data
-        get_data = loop.create_task(ublox_reader.get_data())
+        # Add signals handler to close gracefully the receiver
+        for s in signals:
+            loop.add_signal_handler(
+                s, lambda sig=s: asyncio.create_task(ublox_reader.close_all_connections()))
 
-        # Schedule parse data
-        parse_data = loop.create_task(ublox_reader.parse_data())
-
+        # Set an exception handler to deal with the raised exceptions
+        loop.set_exception_handler(ublox_reader.handle_exception)
         try:
-            # Get data, parse and store until a keyboard interrupt
-            loop.run_until_complete(
-                asyncio.wait({get_data, parse_data})
-            )
-        except KeyboardInterrupt:
-            # Disconnect
-            loop.run_until_complete(ublox_reader.close_all_connections())
+            # Schedule get_data and parse data
+            loop.create_task(ublox_reader.get_data())
+            loop.create_task(ublox_reader.parse_data())
 
+            # Get data, parse and store until a OS signal
+            loop.run_forever()
         finally:
-            # Close the Event Loop
+            # Disconnect
             loop.close()
 
     @classmethod
@@ -146,8 +148,7 @@ class UbloxReceiver:
         and the connection pool to the db
 
         :param loop:  Asynchronous event loop implementation provided by uvloop
-        :return: A UbloxReceiver instance, if no exceptions during the setup
-                of the database and of the SerialReceiver, else return None
+        :return: A UbloxReceiver instance
         """
         # Create an instance of UbloxReader
         self = UbloxReceiver(loop)
@@ -169,57 +170,44 @@ class UbloxReceiver:
                 ), timeout=20
             )
             # Database Log
-            self.logger.info(f"{time.ctime()} : UbloxReceiver: "
-                             f"[Connection]: created a connection pool to {DB_HOST}")
+            self.logger.info(f"{datetime.now()} : INFO : "
+                             f"[DataBase]: created a connection pool to {DB_HOST}")
 
         except OSError as error:
             # Log the exception
-            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
+            await self.logger.error(f"{datetime.now()} : UbloxReceiver: "
                                     f"[ConnectionError]: can't connect to the db {error.strerror}")
-            # Set flag to stop the reader
-            self.receiver_stop.set()
+            raise Exception
 
         except asyncio.TimeoutError:
             # Log the exception
-            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
-                                    f"[ConnectionError]: can't connect to the db ")
-
-            # Set flag to stop the reader
-            self.receiver_stop.set()
+            await self.logger.error(f"{datetime.now()} : ERROR : "
+                                    f"[DataBase]: can't connect to the db ")
+            raise Exception
 
         except asyncpg.PostgresError as error:
             # Log the exception
-            await self.logger.error(f"{time.ctime()} : UbloxReceiver: "
+            await self.logger.error(f"{datetime.now()} : UbloxReceiver: "
                                     f"[DataBaseError]: {str(error.as_dict())}")
+            raise Exception
 
-            # Set event to stop the reader
-            self.receiver_stop.set()
+        # Link parse message function to the coroutine to self.store_data and to the event loop
+        self.data_to_store = partial(parse_message, self.store_data, self.loop)
 
-        # Check if the instantiation of the pool was successful
-        if self.pool:
+        # TODO: create a package for the db
+        #  use functools partial to initialize it like the serial connection
 
-            # Link parse message function to the coroutine to self.store_data and to the event loop
-            self.data_to_store = partial(parse_message, self.store_data, self.loop)
+        # Link UbloxReceiver attributes and methods to SerialReceiver.setup class method
+        serial_setup = partial(
+            SerialReceiver.setup,
+            self.logger,
+            loop
+        )
+        # Setup serial connection
+        self.serial = await serial_setup()
 
-            # TODO: create a package for the db
-            #  use functools partial to initialize it like the serial connection
-
-            # Link UbloxReceiver attributes and methods to SerialReceiver.setup class method
-            serial_setup = partial(
-                SerialReceiver.setup,
-                self.logger,
-                self.receiver_stop,
-                self.close_all_connections,
-                loop
-            )
-            # Setup serial connection
-            self.serial = await serial_setup()
-            # Check if the instantiation and the setup of the serial connection was successful
-            if self.serial:
-                return self
-
-        # Something went wrong
-        return None
+        # Setup made correctly, return self
+        return self
 
     async def get_data(self):
         # type: () -> None
@@ -228,9 +216,10 @@ class UbloxReceiver:
         Once a message is obtained, put it in the queue of the
         data to parse
         """
-        async for message in self.serial.ublox_message():
-            # Put the message in a queue to parse it
-            self.data_to_parse.put_nowait(message)
+        while True:
+            async for message in self.serial.ublox_message():
+                # Put the message in a queue to parse it
+                await self.data_to_parse.put(message)
 
     async def parse_data(self):
         # type: () -> None
@@ -238,10 +227,9 @@ class UbloxReceiver:
         Parse data received from the serial connection, the data that are
         useful are only Time messages and Galileo messages. In case of one
         of those messages, analyze them in an executor. Parse Galileo data only if
-        a Time message was already received.
-        Then schedule the storing of useful data in the database
+        a Time message was already received. Then schedule the storing of useful data in the database
         """
-        while not self.receiver_stop.is_set():
+        while True:
             # Get data from the queue
             data = await self.data_to_parse.get()
             # This is a TIME message
@@ -278,33 +266,52 @@ class UbloxReceiver:
             # Check if there was an error storing the data
             if status != "INSERT 0 1":
                 # Log the warning
-                self.logger.warning(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
-                                    f"[Warning]: error inserting data to db")
+                self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
+                                    f"error inserting data to db")
 
         except asyncpg.PostgresWarning as warning:
             # Log the warning code
-            self.logger.warning(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
-                                f"[Warning]: {str(warning.as_dict())}")
+            self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
+                                f"{str(warning.as_dict())}")
 
         except asyncpg.PostgresError as error:
             # Log the error code
-            self.logger.error(f"{time.ctime()} : UbloxReceiver: [DataBase]: "
-                              f"[Error]: {str(error.as_dict())}")
+            self.logger.error(f"{datetime.now()} : ERROR : [DataBase]: "
+                              f"{str(error.as_dict())}")
 
-    async def close_all_connections(self):
-        # type:() -> None
+    def handle_exception(self, loop, context):
+        # type: (Union[asyncio.AbstractEventLoop, uvloop.Loop], Dict[str, Any]) -> None
+        """
+        Default handler for all the exceptions raised during the execution with the
+        purpose of logging them and schedule the cleanup of the loop.
+
+        :param loop: Event Loop
+        :param context: Dict containing the details of the exception
+        """
+        # context["message"] will always be there; but context["exception"] may not
+        msg = context.get("exception", context["message"])
+        # Schedule the cleanup of the loop
+        loop.create_task(self.close_all_connections(msg=msg))
+
+    async def close_all_connections(self, msg=None):
+        # type:(Optional[str]) -> None
         """
         Close gracefully all the connections
-        """
-        # Log the closing of all the connections
-        self.logger.info(f"\n{time.ctime()} : UbloxReceiver: [Connection]: closing all connections")
 
-        # Stop the Reader
-        self.receiver_stop.set()
-        # Give time to finish pending coroutines
-        await asyncio.sleep(3)
+        :param msg = Message of the serious exception
+        """
+        # Check if there was an exception
+        if msg:
+            # Log the exception
+            await self.logger.error(msg)
+
+        # Log the closing of all the connections
+        await self.logger.warning(f"{datetime.now()} : WARNING : [UbloxReceiver]: closing all connections")
+
+        await self.shut_down()
+
         # Close serial connection
-        self.serial.close()
+        await self.serial.stop_serial()
 
         try:
             # Close gracefully the connection pool
@@ -312,8 +319,27 @@ class UbloxReceiver:
 
         except asyncio.TimeoutError:
             # Timeout expired
-            self.logger.warning(f"{time.ctime()} : UbloxReceiver: [Connection]: error closing the pool")
+            await self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: error closing the pool")
 
-        finally:
-            # Log the exit from the application
-            await self.logger.info(f"{time.ctime()} : UbloxReceiver: [EXIT]")
+        # Shutdown parse data executor
+        self.parse_data_executor.shutdown(wait=False)
+
+        # Log the exit from the application
+        await self.logger.info(f"{datetime.now()} : INFO : [UbloxReceiver]: shutdown completed")
+        # Stop the loop
+        self.loop.stop()
+
+    @classmethod
+    async def shut_down(cls):
+        """
+        Cancel all pending tasks
+        """
+        # Pending tasks
+        pending = [t for t in asyncio.all_tasks() if t is not
+                   asyncio.current_task()]
+
+        # Cancel all pending tasks
+        [task.cancel() for task in pending]
+
+        # Wait for all pending tasks to be cancelled
+        await asyncio.gather(*pending, return_exceptions=True)
