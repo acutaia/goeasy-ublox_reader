@@ -68,7 +68,6 @@ class FakeSerialReceiver(SerialReceiver):
     A class that simulates the  serial connection and the
     behaviour of the SerialReceiver
     """
-
     def __init__(self, logger, loop, port=os.ttyname(slave)):
         # type: (Logger, Loop, Optional[int]) -> None
         """
@@ -116,5 +115,20 @@ class FakeSerialReceiver(SerialReceiver):
         self.start_simulation.join()
 
 
+class Dummy(FakeSerialReceiver):
+    """
+    Dummy class that won't complete the setup
+    method
+    """
+    def __init__(self, logger, loop, port="dummy/fake"):
+        # type: (Logger, Loop, Optional[int]) -> None
+        """
+        Method that will always fail
+
+        :param logger: Asynchronous logger
+        :param loop: Event loop
+        :param port: Serial port simulated thanks to the pseudo terminal
+        """
+        super().__init__(logger, loop, port=port)
 
 
