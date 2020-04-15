@@ -132,3 +132,18 @@ class Dummy(FakeSerialReceiver):
         super().__init__(logger, loop, port=port)
 
 
+class DummyMock(FakeSerialReceiver):
+    """
+    Dummy class that won't send the fake data
+    """
+    @staticmethod
+    def mock_device(msg_per_second=5):
+        # type: (int) -> None
+        """
+        Simulate the serial receiver hardware
+
+        :param msg_per_second: Number of messages sent by the receiver in one second
+        """
+        # Check if the setup bytes are received well
+        for i in range(len(SETUP_BYTES)):
+            assert os.read(master, len(SETUP_BYTES[i])) == SETUP_BYTES[i], "Bytes read should be equal to SETUP_BYTES"
