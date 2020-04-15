@@ -28,6 +28,8 @@ import os
 import pty
 import time
 import threading
+from typing import Optional
+
 
 # Asynchronous libraries
 from aiologger import Logger
@@ -37,6 +39,7 @@ from uvloop import Loop
 # SerialReceiver
 from ublox_reader.serial.receiver import SerialReceiver
 from ublox_reader.serial.constants import SETUP_BYTES
+
 
 # Open the pseudoterminal
 master, slave = pty.openpty()
@@ -66,15 +69,16 @@ class FakeSerialReceiver(SerialReceiver):
     behaviour of the SerialReceiver
     """
 
-    def __init__(self, logger, loop):
-        # type: (Logger, Loop) -> None
+    def __init__(self, logger, loop, port=os.ttyname(slave)):
+        # type: (Logger, Loop, Optional[int]) -> None
         """
         Setup a FakeSerialReceiver
 
         :param logger: Asynchronous logger
         :param loop: Event loop
+        :param port: Serial port simulated thanks to the pseudo terminal
         """
-        super().__init__(logger, loop, port=os.ttyname(slave))
+        super().__init__(logger, loop, port=port)
         # start the simulation of the receiver after timer
         self.start_simulation = threading.Timer(0.3, self.mock_device)
         # set the name
