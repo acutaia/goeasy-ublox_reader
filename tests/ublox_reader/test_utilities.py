@@ -24,7 +24,15 @@ Tests the utilities module
 """
 
 # Standard library
+import asyncio
+from functools import partial
+from concurrent.futures import ThreadPoolExecutor
+
+# Test
 import pytest
+
+# fast event loop
+import uvloop
 
 # utility methods
 from ublox_reader.utilities import adjust_second, parse_time_message, parse_message, read_auth_bits
@@ -44,6 +52,12 @@ __docformat__ = "restructuredtext en"
 
 
 # ------------------------------------------------------------------------------
+
+@pytest.yield_fixture()
+def event_loop():
+    loop = uvloop.Loop()
+    yield loop
+    loop.close()
 
 
 class TestUtilities:
@@ -68,46 +82,56 @@ class TestUtilities:
         # Test read_auth_bit utility
         assert read_auth_bits(TEST_AUTH_BYTES) == 0, "For this payload the 40 bits must be all zero"
 
-    def test_parse_messages(self):
+    @pytest.mark.asyncio
+    async def test_parse_messages(self):
         """
         Test if the time message and the galileo message
         were parsed correctly
         """
+        # Get Event Loop
+        loop = asyncio.get_running_loop()
+        executor = ThreadPoolExecutor(max_workers=1)
+
+        # Link the check data method to parse_message and to the event loop
+        store_data = partial(parse_message, check_data_to_store, loop)
+
         # Time message
-        parse_time_message(TIME_MESSAGE[0:-2])
-        # Galielo message
-        result = parse_message(GALILEO_MESSAGE[0:-2])
+        asyncio.ensure_future(loop.run_in_executor(executor, parse_time_message, TIME_MESSAGE_PAYLOAD))
+        asyncio.ensure_future(loop.run_in_executor(executor, store_data, GALILEO_MESSAGE_PAYLOAD))
 
-        # Check timestamp
-        assert result[1] == timestampMessage_unix, "Wrong unix time stamp"
-        # Check time of the week
-        assert result[2] == raw_galTow, "raw_galTow wrong"
-        # Check week number
-        assert result[3] == raw_galWno, "raw_galWno wrong"
-        # Check leap seconds
-        assert result[4] == raw_leapS, "raw_leapS wrong"
-        # Check data
-        assert result[5] == GALILEO_MESSAGE[0:-2].hex(), "Error converting the bytes in a hex string"
-        # Check auth_bits as integer
-        assert result[6] == 0, "Error converting auth_bits in a integer"
-        # Check service id
-        assert result[7] == raw_svId, "raw_svId wrong"
-        # Check num words
-        assert result[8] == raw_numWords, "raw_numWords wrong"
-        # Check galileo checksum B
-        assert result[9] == raw_ck_B, " Galileo raw_ck_B wrong"
-        # Check galileo checksum A
-        assert result[10] == raw_ck_A, "Galileo raw_ck_A wrong"
-        # Check time checksum A
-        assert result[11] == time_raw_ck_A, "Time raw_ck_A wrong"
-        # Check time checksum B
-        assert result[12] == time_raw_ck_B, "Time raw_ck_B wrong"
-        # Check time stamp message
-        assert result[13] == timestampMessage_galileo, "Wrong galileo timestamp"
+        # Close the executor
+        executor.shutdown(wait=True)
 
 
+async def check_data_to_store(data: tuple):
+    """
+    Check if the data were parsed correctly
 
-
-
-
-
+    :param data: Data to check
+    """
+    # Check timestamp
+    assert data[1] == timestampMessage_unix, "Wrong unix time stamp"
+    # Check time of the week
+    assert data[2] == raw_galTow, "raw_galTow wrong"
+    # Check week number
+    assert data[3] == raw_galWno, "raw_galWno wrong"
+    # Check leap seconds
+    assert data[4] == raw_leapS, "raw_leapS wrong"
+    # Check data
+    assert data[5] == GALILEO_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
+    # Check auth_bits as integer
+    assert data[6] == 0, "Error converting auth_bits in a integer"
+    # Check service id
+    assert data[7] == raw_svId, "raw_svId wrong"
+    # Check num words
+    assert data[8] == raw_numWords, "raw_numWords wrong"
+    # Check galileo checksum B
+    assert data[9] == raw_ck_B, " Galileo raw_ck_B wrong"
+    # Check galileo checksum A
+    assert data[10] == raw_ck_A, "Galileo raw_ck_A wrong"
+    # Check time checksum A
+    assert data[11] == time_raw_ck_A, "Time raw_ck_A wrong"
+    # Check time checksum B
+    assert data[12] == time_raw_ck_B, "Time raw_ck_B wrong"
+    # Check time stamp message
+    assert data[13] == timestampMessage_galileo, "Wrong galileo timestamp"
