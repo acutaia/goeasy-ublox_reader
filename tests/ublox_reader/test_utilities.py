@@ -55,6 +55,9 @@ __docformat__ = "restructuredtext en"
 
 @pytest.yield_fixture()
 def event_loop():
+    """
+    Set uvloop as the default event loop
+    """
     loop = uvloop.Loop()
     yield loop
     loop.close()
