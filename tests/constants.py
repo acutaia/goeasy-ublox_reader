@@ -23,6 +23,11 @@ Test constants
     limitations under the License.
 """
 
+# Standard library
+import os
+
+path_fake_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fake_data.txt')
+
 # ------------------------------------------------------------------------------
 
 # Module version
