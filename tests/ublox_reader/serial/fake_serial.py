@@ -28,7 +28,8 @@ import os
 import pty
 import time
 import threading
-from typing import Optional
+from typing import Optional, Union
+from functools import partial
 
 
 # Asynchronous libraries
@@ -38,8 +39,8 @@ from uvloop import Loop
 
 # SerialReceiver
 from ublox_reader.serial.receiver import SerialReceiver
-from ublox_reader.serial.constants import SETUP_BYTES
-
+from ublox_reader.serial.constants import SETUP_BYTES, UbloxSerialException
+from tests.constants import path_fake_data
 
 # Open the pseudoterminal
 master, slave = pty.openpty()
@@ -63,30 +64,59 @@ __docformat__ = "restructuredtext en"
 ########################
 
 
-class FakeSerialReceiver(SerialReceiver):
+class FakeSerialReceiver:
     """
     A class that simulates the  serial connection and the
     behaviour of the SerialReceiver
     """
-    def __init__(self, logger, loop, port=os.ttyname(slave)):
-        # type: (Logger, Loop, Optional[int]) -> None
+    def __init__(self, simulate="all"):
+        # type: (str) -> None
         """
         Setup a FakeSerialReceiver
-
-        :param logger: Asynchronous logger
-        :param loop: Event loop
-        :param port: Serial port simulated thanks to the pseudo terminal
         """
-        super().__init__(logger, loop, port=port)
+        # serial connection
+        self.serial = None  # type: Optional[SerialReceiver]
+        # simulate
+        self.simulate = simulate  # type: str
         # start the simulation of the receiver after timer
-        self.start_simulation = threading.Timer(0.3, self.mock_device)
+        self.start_simulation = threading.Timer(1, self.mock_device)  # type: threading.Timer
         # set the name
         self.start_simulation.setName("simulate_the_device")
         # start the timer
         self.start_simulation.start()
 
-    @staticmethod
-    def mock_device(msg_per_second=5):
+    @classmethod
+    async def setup(cls, logger, loop, simulate="all", port=os.ttyname(slave)):
+        # type: (Logger, Loop, str, Union[int, str]) -> FakeSerialReceiver
+        """
+        Instantiate a FakeSerialReceiver and simulate the serial connection
+        and the hardware of the receiver
+
+        :param logger: Asynchronous logger
+        :param loop: Event loop
+        :param simulate: simulate completely the hardware or only the setup
+        :param port: Serial Port to simulate
+        :return: A FakeSerialReceiver instance
+        """
+        # Create an instance of FakeSerialReceiver
+        self = FakeSerialReceiver(simulate=simulate)
+
+        # link the logger, the loop and the port to SerialReceiver
+        serial_receiver = partial(SerialReceiver.setup, logger, loop, port)
+        try:
+            # Setup
+            self.serial = await serial_receiver()
+
+        except UbloxSerialException:
+            # Stop the simulation of the hardware
+            self.start_simulation.cancel()
+            # Re raise the exception
+            raise UbloxSerialException
+
+        # everything ok
+        return self
+
+    def mock_device(self, msg_per_second=5):
         # type: (int) -> None
         """
         Simulate the serial receiver hardware
@@ -97,53 +127,20 @@ class FakeSerialReceiver(SerialReceiver):
         for i in range(len(SETUP_BYTES)):
             assert os.read(master, len(SETUP_BYTES[i])) == SETUP_BYTES[i], "Bytes read should be equal to SETUP_BYTES"
 
-        # path to the file containing fake data
-        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'fake_data.txt')
-
-        # Open the file, and send the message to the fake serial port
-        with open(path, "r") as fp:
-            for line in fp:
-                os.write(master, bytearray.fromhex(line))
-                # sleep to have a correct number of messages send in one second
-                time.sleep(1/msg_per_second)
+        # Check if the simulation will be complete
+        if self.simulate == "all":
+            # Open the file, and send the message to the fake serial port
+            with open(path_fake_data, "r") as fp:
+                for line in fp:
+                    os.write(master, bytearray.fromhex(line))
+                    # sleep to have a correct number of messages send in one second
+                    time.sleep(1/msg_per_second)
 
     async def stop_serial(self):
         """
         Method to stop the FakeSerialReceiver
         """
-        await super().stop_serial()
+        await self.serial.stop_serial()
         self.start_simulation.join()
 
 
-class Dummy(FakeSerialReceiver):
-    """
-    Dummy class that won't complete the setup
-    method
-    """
-    def __init__(self, logger, loop, port="dummy/fake"):
-        # type: (Logger, Loop, Optional[int]) -> None
-        """
-        Method that will always fail
-
-        :param logger: Asynchronous logger
-        :param loop: Event loop
-        :param port: Serial port simulated thanks to the pseudo terminal
-        """
-        super().__init__(logger, loop, port=port)
-
-
-class DummyMock(FakeSerialReceiver):
-    """
-    Dummy class that won't send the fake data
-    """
-    @staticmethod
-    def mock_device(msg_per_second=5):
-        # type: (int) -> None
-        """
-        Simulate the serial receiver hardware
-
-        :param msg_per_second: Number of messages sent by the receiver in one second
-        """
-        # Check if the setup bytes are received well
-        for i in range(len(SETUP_BYTES)):
-            assert os.read(master, len(SETUP_BYTES[i])) == SETUP_BYTES[i], "Bytes read should be equal to SETUP_BYTES"
