@@ -78,6 +78,8 @@ class FakeSerialReceiver:
         self.serial = None  # type: Optional[SerialReceiver]
         # simulate
         self.simulate = simulate  # type: str
+        # stop event
+        self.stop_event = threading.Event()  # type: threading.Event
         # start the simulation of the receiver after timer
         self.start_simulation = threading.Timer(1, self.mock_device)  # type: threading.Timer
         # set the name
@@ -132,15 +134,19 @@ class FakeSerialReceiver:
             # Open the file, and send the message to the fake serial port
             with open(path_fake_data, "r") as fp:
                 for line in fp:
-                    os.write(master, bytearray.fromhex(line))
-                    # sleep to have a correct number of messages send in one second
-                    time.sleep(1/msg_per_second)
+                    # Check if the simulation has ben interrupted
+                    if not self.stop_event.is_set():
+                        os.write(master, bytearray.fromhex(line))
+                        # sleep to have a correct number of messages send in one second
+                        time.sleep(1/msg_per_second)
 
     async def stop_serial(self):
         """
         Method to stop the FakeSerialReceiver
         """
         await self.serial.stop_serial()
+        # set stop event and await the thread to finish it's job
+        self.stop_event.set()
         self.start_simulation.join()
 
 
