@@ -28,7 +28,7 @@ import os
 import pty
 import time
 import threading
-from typing import Optional, Union
+from typing import AsyncIterable, Optional, Union
 from functools import partial
 
 
@@ -69,6 +69,7 @@ class FakeSerialReceiver:
     A class that simulates the  serial connection and the
     behaviour of the SerialReceiver
     """
+
     def __init__(self, simulate="all"):
         # type: (str) -> None
         """
@@ -118,7 +119,7 @@ class FakeSerialReceiver:
         # everything ok
         return self
 
-    def mock_device(self, msg_per_second=5):
+    def mock_device(self, msg_per_second=10):
         # type: (int) -> None
         """
         Simulate the serial receiver hardware
@@ -140,13 +141,28 @@ class FakeSerialReceiver:
                         # sleep to have a correct number of messages send in one second
                         time.sleep(1/msg_per_second)
 
+    async def ublox_message(self) -> AsyncIterable[bytearray]:
+        """
+        Wraps SerialReceiver.ublox_message method
+        """
+        async for message in self.serial.ublox_message():
+            yield message
+
+    def close(self):
+        """
+        Wraps SerialReceiver.stop method
+        """
+        self.serial.close()
+
     async def stop_serial(self):
         """
-        Method to stop the FakeSerialReceiver
+        Wraps SerialReceiver.stop_serial method
         """
         await self.serial.stop_serial()
         # set stop event and await the thread to finish it's job
         self.stop_event.set()
         self.start_simulation.join()
+
+
 
 
