@@ -40,7 +40,7 @@ from uvloop import Loop
 # SerialReceiver
 from ublox_reader.serial.receiver import SerialReceiver
 from ublox_reader.serial.constants import SETUP_BYTES, UbloxSerialException
-from tests.constants import path_fake_data
+from tests.constants import FAKE_DATA
 
 # Open the pseudoterminal
 master, slave = pty.openpty()
@@ -133,7 +133,7 @@ class FakeSerialReceiver:
         # Check if the simulation will be complete
         if self.simulate == "all":
             # Open the file, and send the message to the fake serial port
-            with open(path_fake_data, "r") as fp:
+            with open(FAKE_DATA, "r") as fp:
                 for line in fp:
                     # Check if the simulation has ben interrupted
                     if not self.stop_event.is_set():

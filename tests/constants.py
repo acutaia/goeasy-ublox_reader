@@ -26,7 +26,8 @@ Test constants
 # Standard library
 import os
 
-path_fake_data = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fake_data.txt')
+FAKE_DATA = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fake_data.txt')
+"""Path of the file containing the fake data"""
 
 # ------------------------------------------------------------------------------
 

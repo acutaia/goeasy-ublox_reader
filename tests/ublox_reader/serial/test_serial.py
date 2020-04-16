@@ -39,7 +39,7 @@ from ublox_reader.serial.constants import UbloxSerialException
 
 # FakeSerialReceiver
 from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver
-from tests.constants import path_fake_data
+from tests.constants import FAKE_DATA
 
 # ------------------------------------------------------------------------------
 
@@ -92,7 +92,7 @@ class TestSerial:
         # check if fake messages have to be stored
         if with_message:
             # store fake_data
-            with open(path_fake_data, "r") as fp:
+            with open(FAKE_DATA, "r") as fp:
                 self.message_list = [
                     # remove the first two bytes cause they are the delimeter
                     bytearray.fromhex(line)[2:]
