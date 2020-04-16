@@ -59,8 +59,8 @@ class SerialReceiver(AioSerial):
     Ubolox Receiver, reading the data following the
     format of the ublox communication protocol
     """
-    def __init__(self, logger, loop, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
-        # type: (Logger, Loop, Optional[str], Optional[int]) -> None
+    def __init__(self, logger, loop, port, baudrate):
+        # type: (Logger, Loop, str, int) -> None
         """
         Setup a SerialReceiver
 
@@ -75,19 +75,21 @@ class SerialReceiver(AioSerial):
         self.start_reading = False  # type: bool
 
     @classmethod
-    async def setup(cls, logger, loop):
-        # type: (Logger, Loop) -> SerialReceiver
+    async def setup(cls, logger, loop, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
+        # type: (Logger, Loop, Optional[str], Optional[int]) -> SerialReceiver
         """
         Instantiate a SerialReceiver instance and setup the serial connection
         sending the setup bytes to the ublox receiver
 
         :param logger: UbloxReceiver internal logger
         :param loop: Event loop
+        :param port: Serial port used by the receiver
+        :param baudrate: Baudrate of the connection
         :return: A SerialReceiver instance
         """
         try:
             # Create an instance of SerialReceiver
-            self = SerialReceiver(logger, loop)
+            self = SerialReceiver(logger, loop, port, baudrate)
 
             # SerialReceiver Logs
             self.logger.info(f"{datetime.now()} : INFO : [Serial]: connected to {self.port}")
