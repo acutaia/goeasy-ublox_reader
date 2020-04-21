@@ -25,6 +25,7 @@ Tests the utilities module
 
 # Standard library
 import asyncio
+from datetime import datetime
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 
@@ -74,7 +75,7 @@ class TestUtilities:
         """
         assert timestampMessage_unix == adjust_second(
             ((raw_galWno * 604800 + raw_galTow) * 1000 + 935280000000) - (raw_leapS * 1000)
-        ), "Error adjusting time"
+        )/1000, "Error adjusting time"
         assert timestampMessage_galileo == adjust_second((raw_galWno * 604800 + raw_galTow)), \
             "Error adjusting time"
 
@@ -102,16 +103,25 @@ class TestUtilities:
         asyncio.ensure_future(loop.run_in_executor(executor, parse_time_message, TIME_MESSAGE_PAYLOAD))
         asyncio.ensure_future(loop.run_in_executor(executor, store_data, GALILEO_MESSAGE_PAYLOAD))
 
+        # Give some time to execute the coroutine
+        await asyncio.sleep(1)
         # Close the executor
         executor.shutdown(wait=True)
 
 
-async def check_data_to_store(data: tuple):
+async def check_data_to_store(table: str, data: tuple):
     """
     Check if the data were parsed correctly
 
+    :param table: A table inside the database the will contain those data
     :param data: Data to check
     """
+    # Get the current date
+    current = datetime.now()
+
+    # Check the table
+    assert table == f'"{current.year}_Italy_{raw_svId}"', "Error generating the table"
+
     # Check timestamp
     assert data[1] == timestampMessage_unix, "Wrong unix time stamp"
     # Check time of the week
@@ -123,7 +133,7 @@ async def check_data_to_store(data: tuple):
     # Check data
     assert data[5] == GALILEO_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
     # Check auth_bits as integer
-    assert data[6] == 0, "Error converting auth_bits in a integer"
+    assert data[6] == raw_auth, "Error converting auth_bits in a integer"
     # Check service id
     assert data[7] == raw_svId, "raw_svId wrong"
     # Check num words

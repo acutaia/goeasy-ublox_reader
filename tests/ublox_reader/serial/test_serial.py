@@ -168,18 +168,3 @@ class TestSerial:
                         receiver.close()
         # cleanup
         await receiver.stop_serial()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
