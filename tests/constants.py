@@ -25,6 +25,7 @@ Test constants
 
 # Standard library
 import os
+import time
 
 FAKE_DATA = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fake_data.txt')
 """Path of the file containing the fake data"""
@@ -59,7 +60,7 @@ raw_galWno = 1073
 raw_leapS = 18
 """Galileo leap seconds"""
 
-timestampMessage_unix = 1584609709997
+timestampMessage_unix = 1584609709.997
 """Time stamp of the message in a unix system"""
 
 timestampMessage_galileo = 649329725
@@ -88,6 +89,9 @@ GALILEO_MESSAGE_PAYLOAD = bytes([0x2, 0x13, 0x2C, 0x0, 0x2, 0x12, 0x1, 0x0, 0x9,
 TEST_AUTH_BYTES = bytes([0x0, 0x40, 0x65, 0xA6, 0x2A, 0x0, 0x0, 0x0])
 """Bytes that contain inside the 40 auth bits"""
 
+raw_auth = 0
+"""Int value of the 5 authorization bytes"""
+
 raw_svId = 18
 """Galielo service id"""
 
@@ -99,3 +103,29 @@ raw_ck_A = 74
 
 raw_ck_B = 124
 """Galileo checksum B"""
+
+# ------------------------------------------------------------------------------
+
+
+#################
+# DATA TO STORE #
+#################
+
+
+DATA_TO_STORE = (
+    time.time(),
+    timestampMessage_unix,
+    raw_galTow,
+    raw_galWno,
+    raw_leapS,
+    GALILEO_MESSAGE_PAYLOAD.hex(),
+    0,
+    raw_svId,
+    raw_numWords,
+    raw_ck_B,
+    raw_ck_A,
+    time_raw_ck_A,
+    time_raw_ck_B,
+    timestampMessage_galileo
+)
+"""Data to use to test the database"""

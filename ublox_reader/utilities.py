@@ -26,10 +26,15 @@ Utility methods for Ublox Receiver
 # standard library
 import asyncio
 import time
+from datetime import datetime
 from typing import Callable
 from contextvars import ContextVar
+
 # uvloop event loop
 from uvloop import Loop
+
+# settings
+from ublox_reader.settings import config
 
 
 # ------------------------------------------------------------------------------
@@ -41,6 +46,17 @@ __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
+
+# ------------------------------------------------------------------------------
+
+
+###########
+# COUNTRY #
+###########
+
+
+NATION = config.get("COUNTRY", "NATION")
+"""Where the serial receiver is physically connected"""
 
 # ------------------------------------------------------------------------------
 
@@ -91,9 +107,6 @@ timestampMessage_unix = ContextVar("time.timestampMessage_unix", default=0)
 timestampMessage_galileo = ContextVar("time.timestampMessage_galileo", default=0)
 """Time stamp of the message in galileo"""
 
-timestampMessage_unixHumanReadable = ContextVar("time.timestampMessage_unixHumanReadable", default=0)
-"""Time stamp of unix in a readable format"""
-
 # ------------------------------------------------------------------------------
 
 
@@ -125,12 +138,9 @@ def parse_time_message(data: bytes) -> None:
     timestampMessage_unix.set(
         adjust_second(
             ((raw_galWno.get() * 604800 + raw_galTow.get()) * 1000 + 935280000000) - (raw_leapS.get() * 1000)
-        )
+        )/1000  # (divided to turn in seconds)
     )
     timestampMessage_galileo.set(adjust_second((raw_galWno.get() * 604800 + raw_galTow.get())))
-
-    # Save also time in human readable format ( time.ctime accepts only seconds)
-    timestampMessage_unixHumanReadable.set(time.ctime(timestampMessage_unix.get()/1000))
 
 
 def adjust_second(seconds: float) -> float:
@@ -185,9 +195,14 @@ def parse_message(store_data: Callable, loop: Loop, data: bytes) -> None:
     #  const reserved2 = data[11]
     #  const size = int.from_bytes(data[2:4], byteorder="little")
 
+    # Get the current date
+    current = datetime.now()
+
     # Schedule
     asyncio.run_coroutine_threadsafe(
         store_data(
+            # generate table name
+            '"{}_{}_{}"'.format(current.year, NATION, raw_sv_id),
             (
                 receptionTime.get(),
                 timestampMessage_unix.get(),
@@ -247,6 +262,6 @@ def read_auth_bits(data: bytes) -> int:
         # Beginning of the least significant auth bits
         f"{bin(lsb_auth[1])[2:].zfill(8)}"
         # Ending of the least significant auth bits
-        f"{bin(lsb_auth[0])[2:].zfill(8)[0:6]}"
-        , 2  # Use 2 cause it's a binary string
+        f"{bin(lsb_auth[0])[2:].zfill(8)[0:6]}",
+        2  # Use 2 cause it's a binary string
     )
