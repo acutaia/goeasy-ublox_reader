@@ -27,6 +27,7 @@ Tests the ublox_reader.serial package
 import asyncio
 import random
 from typing import Union, List
+
 # Test
 import pytest
 

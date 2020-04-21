@@ -28,7 +28,7 @@ import os
 import pty
 import time
 import threading
-from typing import AsyncIterable, Optional, Union
+from typing import AsyncIterable, Union
 from functools import partial
 
 
@@ -69,20 +69,20 @@ class FakeSerialReceiver:
     A class that simulates the  serial connection and the
     behaviour of the SerialReceiver
     """
+    # serial connection
+    serial: SerialReceiver = None
 
     def __init__(self, simulate="all"):
         # type: (str) -> None
         """
         Setup a FakeSerialReceiver
         """
-        # serial connection
-        self.serial = None  # type: Optional[SerialReceiver]
         # simulate
-        self.simulate = simulate  # type: str
+        self.simulate = simulate
         # stop event
-        self.stop_event = threading.Event()  # type: threading.Event
+        self.stop_event = threading.Event()
         # start the simulation of the receiver after timer
-        self.start_simulation = threading.Timer(1, self.mock_device)  # type: threading.Timer
+        self.start_simulation = threading.Timer(1, self.mock_device)
         # set the name
         self.start_simulation.setName("simulate_the_device")
         # start the timer

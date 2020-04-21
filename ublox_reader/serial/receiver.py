@@ -25,12 +25,12 @@ Asynchronous serial receiver for UbloxReader
 
 # Standard library
 from datetime import datetime
-from typing import AsyncIterable, Optional
+from logging import Logger
+from typing import AsyncIterable
 
 # Asynchronous libraries
-from uvloop import Loop
 from aioserial import AioSerial, SerialException
-from aiologger import Logger
+from uvloop import Loop
 
 # constants
 from ublox_reader.serial.constants import *
@@ -76,7 +76,7 @@ class SerialReceiver(AioSerial):
 
     @classmethod
     async def setup(cls, logger, loop, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
-        # type: (Logger, Loop, Optional[str], Optional[int]) -> SerialReceiver
+        # type: (Logger, Loop, str, int) -> SerialReceiver
         """
         Instantiate a SerialReceiver instance and setup the serial connection
         sending the setup bytes to the ublox receiver
@@ -91,12 +91,13 @@ class SerialReceiver(AioSerial):
             # Create an instance of SerialReceiver
             self = SerialReceiver(logger, loop, port, baudrate)
 
-            # SerialReceiver Logs
-            self.logger.info(f"{datetime.now()} : INFO : [Serial]: connected to {self.port}")
-            self.logger.info(f"{datetime.now()} : INFO : [Serial]: sending setup bytes")
+            # SerialReceiver Log
+            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: connected to {self.port}")
 
             # Set up serial communication
             await self.writelines_async(SETUP_BYTES)
+            # Log
+            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: setup bytes send")
             # Shutdown  serial writer executor cause we won't write anymore serial data
             self._write_executor.shutdown()
 
@@ -153,7 +154,7 @@ class SerialReceiver(AioSerial):
         """
         if not self.start_reading:
             # Log the beginning fo reading data
-            self.logger.info(f"{datetime.now()} : INFO : [Serial]: start reading")
+            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: start reading")
             # set the flag
             self.start_reading = True
 
@@ -185,4 +186,4 @@ class SerialReceiver(AioSerial):
         # Shutdown  serial reader  executor
         self._read_executor.shutdown(wait=False)
         # Log
-        await self.logger.error(f"{datetime.now()} : INFO : [Serial]: disconnected from {self.port}")
+        await self.logger.info(f"{datetime.now()} : INFO : [Serial]: disconnected from {self.port}")

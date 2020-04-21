@@ -24,9 +24,8 @@ Constants for SerialReceiver
     limitations under the License.
 """
 
-# Standard library
-import configparser
-import os
+# settings
+from ublox_reader.settings import config
 
 # ------------------------------------------------------------------------------
 
@@ -36,19 +35,6 @@ __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
-
-# ------------------------------------------------------------------------------
-
-
-############
-# SETTINGS #
-############
-
-config = configparser.ConfigParser()
-"""Config object"""
-
-config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 'ublox_config.ini'))
-"""Read from configuration file"""
 
 # ------------------------------------------------------------------------------
 
