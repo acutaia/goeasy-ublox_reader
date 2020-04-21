@@ -7,12 +7,14 @@
       <w>contextvars</w>
       <w>cutaia</w>
       <w>delimeter</w>
+      <w>doesn</w>
       <w>erros</w>
       <w>excetpion</w>
       <w>excetption</w>
       <w>galielo</w>
       <w>galtow</w>
       <w>galwno</w>
+      <w>gnss</w>
       <w>goeasy</w>
       <w>numwords</w>
       <w>passwd</w>
@@ -24,6 +26,7 @@
       <w>svid</w>
       <w>timestampmessage</w>
       <w>ublox</w>
+      <w>ubolox</w>
       <w>uvloop</w>
     </words>
   </dictionary>

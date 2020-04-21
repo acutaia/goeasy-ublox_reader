@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Constants for UbloxReceiver
+Constants for DataBase
 
 :author: Angelo Cutaia
 :copyright: Copyright 2020, Angelo Cutaia
@@ -24,9 +24,8 @@ Constants for UbloxReceiver
     limitations under the License.
 """
 
-# Standard library
-import configparser
-import os
+# settings
+from ublox_reader.settings import config
 
 # ------------------------------------------------------------------------------
 
@@ -36,18 +35,6 @@ __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
-
-# ------------------------------------------------------------------------------
-
-############
-# SETTINGS #
-############
-
-config = configparser.ConfigParser()
-"""Config object"""
-
-config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'ublox_config.ini'))
-"""Read from configuration file"""
 
 # ------------------------------------------------------------------------------
 
@@ -64,28 +51,25 @@ DB_PORT = config.getint("POSTGRESQL", "PORT")
 """ Port number to connect to at the server host"""
 
 DB_USER = config.get("POSTGRESQL", "USER")
-"""The name of the database role used for authentication"""
+"""The name of the user of the database used for authentication"""
 
 DB = config.get("POSTGRESQL", "DB")
 """The name of the database to connect to"""
 
-DB_PW = config.get("POSTGRESQL", "PASSWD")
+DB_PWD = config.get("POSTGRESQL", "PWD")
 """Password to be used for authentication"""
 
-DB_QUERY = 'INSERT INTO public.messages (' \
-           'receptiontime,' \
-           'timestampmessage_unix,' \
-           'raw_galtow,' \
-           'raw_galwno,' \
-           'raw_leaps,' \
-           'raw_data,' \
-           'raw_authbit,' \
-           'raw_svid,' \
-           'raw_numwords,' \
-           'raw_ck_b,' \
-           'raw_ck_a,' \
-           'raw_ck_a_time,' \
-           'raw_ck_b_time,' \
-           'timestampmessage_galileo' \
-           ') VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);'
-"""Query to insert data in the database"""
+# ------------------------------------------------------------------------------
+
+
+#############
+# EXCEPTION #
+#############
+
+
+class DataBaseException(Exception):
+    """Base class for database errors"""
+    def __init__(self, *args, **kwargs):  # real signature unknown
+        pass
+
+# ------------------------------------------------------------------------------

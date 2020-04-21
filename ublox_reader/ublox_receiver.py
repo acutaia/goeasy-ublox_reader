@@ -29,25 +29,22 @@ import signal
 from datetime import datetime
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor
-
-# Asynchronous libraries
-import uvloop
-import asyncpg
-from aiologger import Logger
-
-# Typing
 from typing import Optional, Union, Callable, Dict, Any
 
-# Ublox constants and utilities
-from ublox_reader.constants import*
-from ublox_reader.utilities import parse_time_message, parse_message
-# Ublox serial receiver
+# Asynchronous libraries
+from aiologger.logger import Logger, LogLevel
+import uvloop
+
+# Ublox
+from ublox_reader.database.postgresql import DataBase
 from ublox_reader.serial.receiver import SerialReceiver
+from ublox_reader.database.constants import DataBaseException
 from ublox_reader.serial.constants import UbloxSerialException
+from ublox_reader.utilities import parse_time_message, parse_message
 
 
 # Substitute asyncio loop with uvloop
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+uvloop.install()
 
 # ------------------------------------------------------------------------------
 
@@ -73,6 +70,15 @@ class UbloxReceiver:
     inserting in a PostgreSQL db the data
     retrieved from the serial connection
     """
+    # serial transmission
+    serial: SerialReceiver = None
+    # logger
+    logger: Logger = None
+    # connection pool to the db
+    db: DataBase = None
+    # data_to_store method
+    data_to_store: Callable = None
+
     def __init__(self, loop):
         # type: (uvloop.Loop) -> None
         """
@@ -80,24 +86,16 @@ class UbloxReceiver:
 
         :param loop: Asynchronous event loop implementation provided by uvloop
         """
-        # serial transmission
-        self.serial = None  # type: Optional[SerialReceiver]
-        # logger
-        self.logger = None  # type: Optional[Logger]
-        # connection pool
-        self.pool = None  # type: Optional[asyncpg.pool.Pool]
         # stop event
-        self.receiver_stop = asyncio.Event()  # type: asyncio.Event
+        self.receiver_stop = asyncio.Event()
         # executor to parse the data
-        self.parse_data_executor = ThreadPoolExecutor(max_workers=1)  # type: ThreadPoolExecutor
+        self.parse_data_executor = ThreadPoolExecutor(max_workers=1)
         # event loop
-        self.loop = loop  # type: uvloop.Loop
+        self.loop = loop
         # flag to notify the reception of a time message
-        self.time_flag = False  # type: bool
+        self.time_flag = False
         # queue containing the data to parse
-        self.data_to_parse = asyncio.Queue()  # type: asyncio.Queue
-        # data_to_store method
-        self.data_to_store = None  # type: Optional[Callable]
+        self.data_to_parse = asyncio.Queue()
 
     @classmethod
     def run(cls):
@@ -107,17 +105,17 @@ class UbloxReceiver:
         gracefully
         """
         # Get a new instance of the Event Loop
-        loop = asyncio.new_event_loop()
-        # Set as the default loop of this thread
-        asyncio.set_event_loop(loop)
+        loop = asyncio.get_event_loop()
 
         # OS signals to stop the receiver
         signals = (signal.SIGHUP, signal.SIGTERM, signal.SIGINT, signal.SIGQUIT)
 
         try:
             # Setup the Reader
-            ublox_reader = loop.run_until_complete(UbloxReceiver.set_up(loop))  # type: UbloxReceiver
-        except (Exception, UbloxSerialException):
+            ublox_reader: UbloxReceiver = loop.run_until_complete(UbloxReceiver.set_up(loop))
+
+        except (DataBaseException, UbloxSerialException):
+            # Something went wrong
             loop.run_until_complete(UbloxReceiver.shut_down())
             loop.close()
             return
@@ -152,50 +150,16 @@ class UbloxReceiver:
         """
         # Create an instance of UbloxReader
         self = UbloxReceiver(loop)
+
         # Instantiate logger
-        self.logger = Logger.with_default_handlers(name="UbloxReceiver", loop=loop)
+        self.logger = Logger.with_default_handlers(name="UbloxReceiver", level=LogLevel.INFO)
 
-        try:
-            # Create a connection pool to the db
-            self.pool = await asyncio.wait_for(
-                asyncpg.create_pool(
-                    min_size=1,
-                    max_size=10,
-                    loop=loop,
-                    host=DB_HOST,
-                    port=DB_PORT,
-                    user=DB_USER,
-                    password=DB_PW,
-                    database=DB,
-                ), timeout=20
-            )
-            # Database Log
-            self.logger.info(f"{datetime.now()} : INFO : "
-                             f"[DataBase]: created a connection pool to {DB_HOST}")
-
-        except OSError as error:
-            # Log the exception
-            await self.logger.error(f"{datetime.now()} : UbloxReceiver: "
-                                    f"[ConnectionError]: can't connect to the db {error.strerror}")
-            raise Exception
-
-        except asyncio.TimeoutError:
-            # Log the exception
-            await self.logger.error(f"{datetime.now()} : ERROR : "
-                                    f"[DataBase]: can't connect to the db ")
-            raise Exception
-
-        except asyncpg.PostgresError as error:
-            # Log the exception
-            await self.logger.error(f"{datetime.now()} : UbloxReceiver: "
-                                    f"[DataBaseError]: {str(error.as_dict())}")
-            raise Exception
-
-        # Link parse message function to the coroutine to self.store_data and to the event loop
-        self.data_to_store = partial(parse_message, self.store_data, self.loop)
-
-        # TODO: create a package for the db
-        #  use functools partial to initialize it like the serial connection
+        # Link UbloxReceiver attributes and methods to Database.setup class method
+        database_setup = partial(
+            DataBase.setup,
+            self.logger,
+            self.loop
+        )
 
         # Link UbloxReceiver attributes and methods to SerialReceiver.setup class method
         serial_setup = partial(
@@ -203,6 +167,13 @@ class UbloxReceiver:
             self.logger,
             loop
         )
+
+        # Setup database
+        self.db = await database_setup()
+
+        # Link parse message function to DataBase.store_data coroutine and to the event loop
+        self.data_to_store = partial(parse_message, self.db.store_data, self.loop)
+
         # Setup serial connection
         self.serial = await serial_setup()
 
@@ -210,7 +181,6 @@ class UbloxReceiver:
         return self
 
     async def get_data(self):
-        # type: () -> None
         """
         Read data from serial connection until obtain a ublox message.
         Once a message is obtained, put it in the queue of the
@@ -222,7 +192,6 @@ class UbloxReceiver:
                 await self.data_to_parse.put(message)
 
     async def parse_data(self):
-        # type: () -> None
         """
         Parse data received from the serial connection, the data that are
         useful are only Time messages and Galileo messages. In case of one
@@ -249,35 +218,6 @@ class UbloxReceiver:
 
             # set the parsing of the data done
             self.data_to_parse.task_done()
-
-    async def store_data(self, data_to_store):
-        # type:(tuple) -> None
-        """
-        Use a connection from the pool to insert the data in the db
-        and check if the insertion is successful then release the
-        connection. If all the connection are busy, await for
-        a connection to be free.
-
-        :param data_to_store: Data to insert in the database
-        """
-        try:
-            # Take a connection from the pool and execute the query
-            status = await self.pool.execute(DB_QUERY, *data_to_store)
-            # Check if there was an error storing the data
-            if status != "INSERT 0 1":
-                # Log the warning
-                self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
-                                    f"error inserting data to db")
-
-        except asyncpg.PostgresWarning as warning:
-            # Log the warning code
-            self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
-                                f"{str(warning.as_dict())}")
-
-        except asyncpg.PostgresError as error:
-            # Log the error code
-            self.logger.error(f"{datetime.now()} : ERROR : [DataBase]: "
-                              f"{str(error.as_dict())}")
 
     def handle_exception(self, loop, context):
         # type: (Union[asyncio.AbstractEventLoop, uvloop.Loop], Dict[str, Any]) -> None
@@ -308,24 +248,23 @@ class UbloxReceiver:
         # Log the closing of all the connections
         await self.logger.warning(f"{datetime.now()} : WARNING : [UbloxReceiver]: closing all connections")
 
+        # Cancel all pending tasks
         await self.shut_down()
 
         # Close serial connection
         await self.serial.stop_serial()
 
-        try:
-            # Close gracefully the connection pool
-            await asyncio.wait_for(self.pool.close(), timeout=1)
-
-        except asyncio.TimeoutError:
-            # Timeout expired
-            await self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: error closing the pool")
+        # Close database
+        await self.db.close()
 
         # Shutdown parse data executor
         self.parse_data_executor.shutdown(wait=False)
 
         # Log the exit from the application
         await self.logger.info(f"{datetime.now()} : INFO : [UbloxReceiver]: shutdown completed")
+        # shutdown the logger
+        await self.logger.shutdown()
+
         # Stop the loop
         self.loop.stop()
 
