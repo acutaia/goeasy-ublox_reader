@@ -25,7 +25,6 @@ Dummy UbloxReceiver class for testing
 # Standard library
 import signal
 import asyncio
-from functools import partial
 from typing import Union
 
 # Asynchronous libraries
@@ -36,7 +35,6 @@ from uvloop import Loop
 from ublox_reader.ublox_receiver import UbloxReceiver
 from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver
 from tests.ublox_reader.database.dummy import DummyDataBase
-from ublox_reader.utilities import parse_message
 # Exceptions
 from ublox_reader.serial.constants import UbloxSerialException
 from ublox_reader.database.constants import DataBaseException
@@ -65,6 +63,8 @@ class DummyUblox(UbloxReceiver):
     A class that simulates the behaviour of
     the UbloxReceiver
     """
+    serial: FakeSerialReceiver = None
+
     @classmethod
     def run(cls):
         """
@@ -82,7 +82,7 @@ class DummyUblox(UbloxReceiver):
 
         try:
             # Setup the Reader
-            ublox_reader: UbloxReceiver = loop.run_until_complete(DummyUblox.set_up(loop))
+            ublox_reader: DummyUblox = loop.run_until_complete(DummyUblox.set_up(loop))
 
         except (DataBaseException, UbloxSerialException):
             # Something went wrong
@@ -99,10 +99,9 @@ class DummyUblox(UbloxReceiver):
         loop.set_exception_handler(ublox_reader.handle_exception)
         try:
             # Schedule the stop of the execution
-            loop.call_later(30, DummyUblox.stop_test)
+            loop.call_later(1, ublox_reader.stop_test)
             # Schedule get_data and parse data
             loop.create_task(ublox_reader.get_data())
-            loop.create_task(ublox_reader.parse_data())
 
             # Get data, parse and store until a OS signal
             loop.run_forever()
@@ -128,37 +127,22 @@ class DummyUblox(UbloxReceiver):
         # disable for testing purpose
         self.logger.disabled = True
 
-        # Link UbloxReceiver attributes and methods to Database.setup class method
-        database_setup = partial(
-            DummyDataBase.setup,
-            self.logger,
-            self.loop
-        )
-
-        # Link UbloxReceiver attributes and methods to SerialReceiver.setup class method
-        serial_setup = partial(
-            FakeSerialReceiver.setup,
-            self.logger,
-            loop
-        )
-
         # Setup database
-        self.db = await database_setup()
-
-        # Link parse message function to DataBase.store_data coroutine and to the event loop
-        self.data_to_store = partial(parse_message, self.db.store_data, self.loop)
+        self.db = await DummyDataBase.setup(self.logger, loop)
 
         # Setup serial connection
-        self.serial = await serial_setup()
+        self.serial = await FakeSerialReceiver.setup(self.logger, loop)
 
         # Setup made correctly, return self
         return self
 
-    @classmethod
-    def stop_test(cls):
+    def stop_test(self):
         """
-        Raise an exception to stop the test
+        Trampoline function to check if the fake
+        serial receiver is still sending data to the fake serial connection.
+        When the fake data are ended, it will raise an exception sto stop the execution
         """
-        raise Exception
-
-
+        if self.serial.start_simulation.is_alive():
+            self.loop.call_later(1, self.stop_test)
+        else:
+            raise Exception

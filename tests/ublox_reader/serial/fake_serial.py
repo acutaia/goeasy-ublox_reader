@@ -29,13 +29,10 @@ import pty
 import time
 import threading
 from typing import AsyncIterable, Union
-from functools import partial
-
 
 # Asynchronous libraries
 from aiologger import Logger
 from uvloop import Loop
-
 
 # SerialReceiver
 from ublox_reader.serial.receiver import SerialReceiver
@@ -104,11 +101,9 @@ class FakeSerialReceiver:
         # Create an instance of FakeSerialReceiver
         self = FakeSerialReceiver(simulate=simulate)
 
-        # link the logger, the loop and the port to SerialReceiver
-        serial_receiver = partial(SerialReceiver.setup, logger, loop, port)
         try:
             # Setup
-            self.serial = await serial_receiver()
+            self.serial = await SerialReceiver.setup(logger, loop, port)
 
         except UbloxSerialException:
             # Stop the simulation of the hardware
@@ -119,7 +114,7 @@ class FakeSerialReceiver:
         # everything ok
         return self
 
-    def mock_device(self, msg_per_second=10):
+    def mock_device(self, msg_per_second=20):
         # type: (int) -> None
         """
         Simulate the serial receiver hardware

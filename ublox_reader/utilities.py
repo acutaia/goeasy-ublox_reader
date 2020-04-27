@@ -24,14 +24,12 @@ Utility methods for Ublox Receiver
 """
 
 # standard library
-import asyncio
 import time
 from datetime import datetime
-from typing import Callable
-from contextvars import ContextVar
+from typing import Union
 
-# uvloop event loop
-from uvloop import Loop
+# bit utilities
+from bitarray import bitarray
 
 # settings
 from ublox_reader.settings import config
@@ -50,218 +48,138 @@ __docformat__ = "restructuredtext en"
 # ------------------------------------------------------------------------------
 
 
-###########
-# COUNTRY #
-###########
+###############
+# DATA PARSER #
+###############
 
 
-NATION = config.get("COUNTRY", "NATION")
-"""Where the serial receiver is physically connected"""
-
-# ------------------------------------------------------------------------------
-
-
-##############
-# BYTES MASK #
-##############
-
-
-LSB_MASK = bytes([0x00, 0x00, 0x3F, 0xFF])
-"""Least significant bit mask"""
-
-MSB_MASK = bytes([0xFF, 0xFF, 0xFF, 0xC0])
-"""Most significant bit mask"""
-
-# ------------------------------------------------------------------------------
-
-
-#####################
-# TIME MESSAGE VARS #
-#####################
-
-
-receptionTime = ContextVar("time.receptionTime", default=0)
-"""Reception time of the message"""
-
-receptionTimeHumanReadableFormat = ContextVar("time.receptionTimeHumanReadableFormat", default=0)
-"""Reception time in human readable format"""
-
-raw_galTow = ContextVar("time.raw_galTow", default=0)
-"""Galielo time of the week"""
-
-raw_galWno = ContextVar("time.raw_galWno", default=0)
-"""Galielo week number"""
-
-raw_leapS = ContextVar("time.raw_leapS", default=0)
-"""Galileo leap seconds"""
-
-time_raw_ck_A = ContextVar("time.raw_ck_A", default=0)
-"""Checksum A"""
-
-time_raw_ck_B = ContextVar("time.raw_ck_B", default=0)
-"""Checksum B"""
-
-timestampMessage_unix = ContextVar("time.timestampMessage_unix", default=0)
-"""Time stamp of the message in unix"""
-
-timestampMessage_galileo = ContextVar("time.timestampMessage_galileo", default=0)
-"""Time stamp of the message in galileo"""
-
-# ------------------------------------------------------------------------------
-
-
-############################
-# TIME UTILITIES FUNCTIONS #
-############################
-
-
-def parse_time_message(data: bytes) -> None:
+class DataParser:
     """
-    The time of the message reception is not the same time written
-    inside the message. The scope of this function is to analise and
-    store the information inside the contextvars
-
-    :param data: Bytes to parse
+    A utility class which scope is to extract
+    information from the ublox_messages
     """
-    # Save the time of the message reception
-    receptionTime.set(time.time())
-    receptionTimeHumanReadableFormat.set(time.ctime(receptionTime.get()))
+    # Where the serial receiver is physically connected
+    nation: str = config.get("COUNTRY", "NATION")
 
-    # Read RAW data from the message
-    raw_galTow.set(int.from_bytes(data[8:12], byteorder="little"))
-    raw_galWno.set(int.from_bytes(data[16:18], byteorder="little"))
-    raw_leapS.set(data[18])
-    time_raw_ck_A.set(data[24])
-    time_raw_ck_B.set(data[25])
+    # Time constants
+    year: int = None
+    reception_time: float = None
+    timestamp_message_unix: float = None
+    timestamp_message_galileo: int = None
 
-    # Compute time using all the data read from raw data
-    timestampMessage_unix.set(
-        adjust_second(
-            ((raw_galWno.get() * 604800 + raw_galTow.get()) * 1000 + 935280000000) - (raw_leapS.get() * 1000)
-        )/1000  # (divided to turn in seconds)
-    )
-    timestampMessage_galileo.set(adjust_second((raw_galWno.get() * 604800 + raw_galTow.get())))
+    # Galielo
+    raw_gal_tow: int = None
+    raw_gal_wno: int = None
+    raw_leap_s: int = None
 
+    # Checksum
+    time_raw_ck_a: int = None
+    time_raw_ck_b: int = None
 
-def adjust_second(seconds: float) -> float:
-    """
-    Utility function to adjust reception time
+    def parse_time_message(self, data: bytes) -> None:
+        """
+        The time of the message reception is not the same time written
+        inside the message. The scope of this function is to analise and
+        store the information inside it's attributes in order to merge it
+        with galileo message to fill the tuple of data to store
 
-    :param seconds: Time of the received message
-    :return: Correct reception time
-    """
-    # TODO: try and test -3 and -2 or -2 and -1
-    #  (reception time is more than the real time). Messages are retrived each seconds,
-    #  but ublox send message every second, divided at odd or even seconds.
-    #  --> ask to GIANLUCA
-    if seconds % 2 == 0:
-        return seconds - 3
-    else:
-        return seconds - 2
+        :param data: Bytes to parse
+        """
+        # Save the time of the message reception
+        self.year = datetime.now().year
+        self.reception_time = time.time()
 
+        # Read RAW data from the message
+        self.raw_gal_tow = int.from_bytes(data[8:12], byteorder="little")
+        self.raw_gal_wno = int.from_bytes(data[16:18], byteorder="little")
+        self.raw_leap_s = data[18]
+        self.time_raw_ck_a = data[24]
+        self.time_raw_ck_b = data[25]
 
-# ------------------------------------------------------------------------------
+        # Compute time using all the data read from raw data
+        self.timestamp_message_unix = DataParser.adjust_second(
+                ((self.raw_gal_wno * 604800 + self.raw_gal_tow) * 1000 + 935280000000) - (self.raw_leap_s * 1000)
+            )/1000  # (divided to turn in seconds)
 
+        self.timestamp_message_galileo = DataParser.adjust_second((self.raw_gal_wno * 604800 + self.raw_gal_tow))
 
-###############################
-# GALILEO UTILITIES FUNCTIONS #
-###############################
+    @staticmethod
+    def adjust_second(seconds: Union[float, int]) -> Union[float, int]:
+        """
+        Utility method to adjust reception time
 
+        :param seconds: Time of the received message
+        :return: Correct reception time
+        """
+        # TODO: try and test -3 and -2 or -2 and -1
+        #  (reception time is more than the real time). Messages are retrived each seconds,
+        #  but ublox send message every second, divided at odd or even seconds.
+        #  --> ask to GIANLUCA
+        if seconds % 2 == 0:
+            return seconds - 3
+        else:
+            return seconds - 2
 
-def parse_message(store_data: Callable, loop: Loop, data: bytes) -> None:
-    """
-    Utility function to extract data from the GALILEO message and
-    combine them with the values of the time message stored inside
-    the contextvars. When the data are obtained, schedule the store_data
-    coroutine in the event loop
+    def parse_message(self, data: bytes) -> Union[str, tuple]:
+        """
+        Method to extract data from the GALILEO message and
+        combine them with the values of the time message. After the data
+        are extracted, generate the database table name that will contain them
+        and the tuple of data to store.
 
-    :param store_data: Coroutine to store data
-    :param loop: Event Loop
-    :param data: bytes to analise
-    """
-    # Read all data
-    raw_sv_id = data[5]
-    # auth bit are encoded in 8 bytes from byte 28 to byte 36
-    raw_auth_bits = read_auth_bits(data[28:36])
-    raw_num_words = data[8]
-    raw_ck_a = data[48]
-    raw_ck_b = data[49]
+        :param data: bytes to analise
+        :return: Table name and the tuple of data to store
+        """
+        # Read all data
+        raw_sv_id = data[5]
+        # auth bit are encoded in 8 bytes from byte 28 to byte 36
+        raw_auth_bits = DataParser.read_auth_bits(data[28:36])
+        raw_num_words = data[8]
+        raw_ck_a = data[48]
+        raw_ck_b = data[49]
 
-    # TODO: currently not needed data
-    #  const reserved1 = data[6]
-    #  const freqId = data[7]
-    #  const chn = data[9]
-    #  const version = data[10]
-    #  const reserved2 = data[11]
-    #  const size = int.from_bytes(data[2:4], byteorder="little")
+        # TODO: currently not needed data
+        #  const reserved1 = data[6]
+        #  const freqId = data[7]
+        #  const chn = data[9]
+        #  const version = data[10]
+        #  const reserved2 = data[11]
+        #  const size = int.from_bytes(data[2:4], byteorder="little")
 
-    # Get the current date
-    current = datetime.now()
+        # Return the table name and the tuple of data to store
+        return f"{self.year}_{self.nation}_{raw_sv_id}", (
+            self.reception_time,
+            self.timestamp_message_unix,
+            self.raw_gal_tow,
+            self.raw_gal_wno,
+            self.raw_leap_s,
+            data.hex(),
+            raw_auth_bits,
+            raw_sv_id,
+            raw_num_words,
+            raw_ck_b,
+            raw_ck_a,
+            self.time_raw_ck_a,
+            self.time_raw_ck_b,
+            self.timestamp_message_galileo
+        )
 
-    # Schedule
-    asyncio.run_coroutine_threadsafe(
-        store_data(
-            # generate table name
-            '"{}_{}_{}"'.format(current.year, NATION, raw_sv_id),
-            (
-                receptionTime.get(),
-                timestampMessage_unix.get(),
-                raw_galTow.get(),
-                raw_galWno.get(),
-                raw_leapS.get(),
-                data.hex(),
-                raw_auth_bits,
-                raw_sv_id,
-                raw_num_words,
-                raw_ck_b,
-                raw_ck_a,
-                time_raw_ck_A.get(),
-                time_raw_ck_B.get(),
-                timestampMessage_galileo.get()
-            )
-        ), loop
-    )
+    @staticmethod
+    def read_auth_bits(data: bytes) -> int:
+        """
+        Utility method to retrieve only auth bits from the entire data string
 
+        :param data: The 8 bytes to analise
+        :return: An integer which represents the 40 auth bits
+        """
+        # initialize the array
+        auth_bits = bitarray(endian="little")
 
-def read_auth_bits(data: bytes) -> int:
-    """
-    Utility function to retrieve only auth bits from the entire data string
+        # get the 64 bits
+        auth_bits.frombytes(data)
 
-    :param data: The 8 bytes to analise
-    :return: An integer which represents the 40 auth bits
-    """
-    # Read the MSB and LSB
-    lsb_num = data[0:4]
-    msb_num = data[4:]
+        # isolate the 40 auth bits
+        del auth_bits[14:38]
 
-    # Perform bitwise AND in order to isolate only the 40 auth bits
-    lsb_auth = bytes(
-        [
-            lsb_num[i] & LSB_MASK[i]
-            for i in range(0, 4)
-        ]
-    )
-    msb_auth = bytes(
-        [
-            msb_num[i] & MSB_MASK[i]
-            for i in range(0, 4)
-        ]
-    )
-
-    # Convert the binary string in an integer
-    return int(
-        # Convert the 40 auth bits in a binary string
-
-        # Beginning of the most significant auth bits
-        f"{bin(msb_auth[3])[2:].zfill(8)}"
-        f"{bin(msb_auth[2])[2:].zfill(8)}"
-        f"{bin(msb_auth[1])[2:].zfill(8)}"
-        # Ending of the most significant auth bits
-        f"{bin(msb_auth[0])[2:].zfill(8)[0:2]}"
-
-        # Beginning of the least significant auth bits
-        f"{bin(lsb_auth[1])[2:].zfill(8)}"
-        # Ending of the least significant auth bits
-        f"{bin(lsb_auth[0])[2:].zfill(8)[0:6]}",
-        2  # Use 2 cause it's a binary string
-    )
+        # return the value of those 40 bits as an integer
+        return int.from_bytes(auth_bits.tobytes(), byteorder="little")

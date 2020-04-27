@@ -40,5 +40,8 @@ __docformat__ = "restructuredtext en"
 
 
 def test_run():
+    """
+    Run a complete simulation of the UbloxReceiver
+    """
     DummyUblox.run()
 

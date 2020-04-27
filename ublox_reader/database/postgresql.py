@@ -78,6 +78,7 @@ class DataBase:
         """
         # Logging
         self.logger = logger
+        self.lock = asyncio.Lock()
         # Event loop
         self.loop = loop
         # Database constants
@@ -177,7 +178,7 @@ class DataBase:
 
         except asyncpg.InvalidCatalogNameError:
             # Database does not exist, create it
-            await self.logger.warning(f"{datetime.now()} : WARNING : "
+            self.logger.warning(f"{datetime.now()} : WARNING : "
                                 f"[DataBase]: database {self.database} doesn't exist")
 
             # create a single connection to the default user and the database template
@@ -195,8 +196,8 @@ class DataBase:
             # close the connection
             await sys_conn.close()
             # Database Log
-            await self.logger.info(f"{datetime.now()} : INFO : "
-                                   f"[DataBase]: created database {self.database}")
+            self.logger.info(f"{datetime.now()} : INFO : "
+                             f"[DataBase]: created database {self.database}")
 
             # Connect to the newly created database.
             await self.create_database_if_not_exist()
@@ -217,8 +218,8 @@ class DataBase:
         try:
             # Take a connection from the pool and execute the query
             await self.pool.execute(
-                '''
-                INSERT INTO {} (
+                f'''
+                INSERT INTO "{table}" (
                 receptiontime,
                 timestampmessage_unix,
                 raw_galtow,
@@ -233,45 +234,46 @@ class DataBase:
                 raw_ck_a_time,
                 raw_ck_b_time,
                 timestampmessage_galileo
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);'''.format(table),
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);''',
                 *data_to_store
             )
 
         # Check if the table does'nt exist
         except asyncpg.UndefinedTableError:
             # Log the error code
-            await self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
-                                      f"relation {table} doesn't exist")
+            self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
+                                f"relation {table} doesn't exist")
             # Create the table
-            await self.pool.execute(
-                '''
-                    CREATE TABLE {} (
-                    receptiontime bigint,
-                    timestampmessage_unix bigint,
-                    PRIMARY KEY (timestampmessage_unix),
-                    raw_galtow integer,
-                    raw_galwno integer,
-                    raw_leaps integer,
-                    raw_data text,
-                    raw_authbit integer,
-                    raw_svid integer,
-                    raw_numwords integer,
-                    raw_ck_b integer,
-                    raw_ck_a integer,
-                    raw_ck_a_time integer,
-                    raw_ck_b_time integer,
-                    timestampmessage_galileo bigint
-                    );
-                    '''.format(table)
-            )
-            # Log
-            await self.logger.info(f"{datetime.now()} : INFO : [DataBase]: relation {table} created")
+            async with self.pool.acquire() as con:
+                await con.execute(
+                    f'''
+                        CREATE TABLE IF NOT EXISTS "{table}" (
+                        receptiontime bigint,
+                        timestampmessage_unix bigint,
+                        PRIMARY KEY (timestampmessage_unix),
+                        raw_galtow integer,
+                        raw_galwno integer,
+                        raw_leaps integer,
+                        raw_data text,
+                        raw_authbit bigint,
+                        raw_svid integer,
+                        raw_numwords integer,
+                        raw_ck_b integer,
+                        raw_ck_a integer,
+                        raw_ck_a_time integer,
+                        raw_ck_b_time integer,
+                        timestampmessage_galileo bigint
+                        );
+                         '''
+                )
+                # Log
+                self.logger.info(f"{datetime.now()} : INFO : [DataBase]: relation {table} created")
 
-            # Create a index for the table
-            await self.pool.execute(
-                "CREATE INDEX CONCURRENTLY idx_timestampmessage_unix on {} "
-                "(timestampmessage_unix DESC NULLS LAST);".format(table)
-            )
+                # Create a index for the table
+                await con.execute(
+                    f'''CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_timestampmessage_unix on "{table}"
+                     (timestampmessage_unix DESC NULLS LAST);'''
+                    )
 
             # store data in the new table
             await self.store_data(table, data_to_store)

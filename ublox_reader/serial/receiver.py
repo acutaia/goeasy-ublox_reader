@@ -171,7 +171,7 @@ class SerialReceiver(AioSerial):
             # Save the payload of the message and the two final bytes (checksum)
             message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
             # Give the message
-            yield message
+            yield bytes(message)
 
         except SerialException as error:
             # Raise exception

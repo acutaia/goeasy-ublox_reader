@@ -31,7 +31,7 @@ from typing import Union, List
 # Test
 import pytest
 
-# Asynchronous Library
+# Asynchronous Libraries
 import uvloop
 from aiologger import Logger
 

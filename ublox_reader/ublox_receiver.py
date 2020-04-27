@@ -27,7 +27,6 @@ Asynchronous Ublox Receiver
 import asyncio
 import signal
 from datetime import datetime
-from functools import partial
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Union, Callable, Dict, Any
 
@@ -40,7 +39,7 @@ from ublox_reader.database.postgresql import DataBase
 from ublox_reader.serial.receiver import SerialReceiver
 from ublox_reader.database.constants import DataBaseException
 from ublox_reader.serial.constants import UbloxSerialException
-from ublox_reader.utilities import parse_time_message, parse_message
+from ublox_reader.utilities import DataParser
 
 
 # Substitute asyncio loop with uvloop
@@ -86,6 +85,8 @@ class UbloxReceiver:
 
         :param loop: Asynchronous event loop implementation provided by uvloop
         """
+        # utility class
+        self.parser = DataParser()
         # stop event
         self.receiver_stop = asyncio.Event()
         # executor to parse the data
@@ -94,6 +95,8 @@ class UbloxReceiver:
         self.loop = loop
         # flag to notify the reception of a time message
         self.time_flag = False
+        # time lock
+        self.time_lock = asyncio.Lock()
         # queue containing the data to parse
         self.data_to_parse = asyncio.Queue()
 
@@ -130,7 +133,6 @@ class UbloxReceiver:
         try:
             # Schedule get_data and parse data
             loop.create_task(ublox_reader.get_data())
-            loop.create_task(ublox_reader.parse_data())
 
             # Get data, parse and store until a OS signal
             loop.run_forever()
@@ -154,28 +156,11 @@ class UbloxReceiver:
         # Instantiate logger
         self.logger = Logger.with_default_handlers(name="UbloxReceiver", level=LogLevel.INFO)
 
-        # Link UbloxReceiver attributes and methods to Database.setup class method
-        database_setup = partial(
-            DataBase.setup,
-            self.logger,
-            self.loop
-        )
-
-        # Link UbloxReceiver attributes and methods to SerialReceiver.setup class method
-        serial_setup = partial(
-            SerialReceiver.setup,
-            self.logger,
-            loop
-        )
-
         # Setup database
-        self.db = await database_setup()
-
-        # Link parse message function to DataBase.store_data coroutine and to the event loop
-        self.data_to_store = partial(parse_message, self.db.store_data, self.loop)
+        self.db = await DataBase.setup(self.logger, loop)
 
         # Setup serial connection
-        self.serial = await serial_setup()
+        self.serial = await SerialReceiver.setup(self.logger, loop)
 
         # Setup made correctly, return self
         return self
@@ -189,35 +174,30 @@ class UbloxReceiver:
         while True:
             async for message in self.serial.ublox_message():
                 # Put the message in a queue to parse it
-                await self.data_to_parse.put(message)
+                self.loop.create_task(self.parse_data(message))
 
-    async def parse_data(self):
+    async def parse_data(self, data):
         """
         Parse data received from the serial connection, the data that are
         useful are only Time messages and Galileo messages. In case of one
         of those messages, analyze them in an executor. Parse Galileo data only if
         a Time message was already received. Then schedule the storing of useful data in the database
         """
-        while True:
-            # Get data from the queue
-            data = await self.data_to_parse.get()
-            # This is a TIME message
-            if data[0] == 1:
-                # Set the received time message flag
-                self.time_flag = True
-                # Analyze the message in a executor
-                asyncio.ensure_future(self.loop.run_in_executor(self.parse_data_executor, parse_time_message, data))
-
-            # This is a GNSS message
-            elif data[0] == 2 and self.time_flag:
-                # Check if it's a GALILEO message
-                # {GPS: 0}, {SBUS: 1}, {GALILEO: 2}, {BEIDU: 3}, {IMES: 4}, {QZSS: 5}, {GLONASS: 6}
-                if data[4] == 2:
-                    # Analyze the message in a executor and scheduling the storing of the data
-                    asyncio.ensure_future(self.loop.run_in_executor(self.parse_data_executor, self.data_to_store, data))
-
-            # set the parsing of the data done
-            self.data_to_parse.task_done()
+        # This is a TIME message
+        if data[0] == 1:
+            # Set the received time message flag
+            self.time_flag = True
+            # Analyze the message in a executor
+            self.parser.parse_time_message(data)
+            return
+        # This is a GNSS message
+        elif data[0] == 2 and self.time_flag:
+            # Check if it's a GALILEO message
+            # {GPS: 0}, {SBUS: 1}, {GALILEO: 2}, {BEIDU: 3}, {IMES: 4}, {QZSS: 5}, {GLONASS: 6}
+            if data[4] == 2:
+                # Analyze the message in a executor and scheduling the storing of the data
+                table_name, data_to_store = self.parser.parse_message(data)
+                await self.db.store_data(table_name, data_to_store)
 
     def handle_exception(self, loop, context):
         # type: (Union[asyncio.AbstractEventLoop, uvloop.Loop], Dict[str, Any]) -> None
@@ -256,9 +236,6 @@ class UbloxReceiver:
 
         # Close database
         await self.db.close()
-
-        # Shutdown parse data executor
-        self.parse_data_executor.shutdown(wait=False)
 
         # Log the exit from the application
         await self.logger.info(f"{datetime.now()} : INFO : [UbloxReceiver]: shutdown completed")

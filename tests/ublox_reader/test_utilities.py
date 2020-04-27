@@ -36,7 +36,7 @@ import pytest
 import uvloop
 
 # utility methods
-from ublox_reader.utilities import adjust_second, parse_time_message, parse_message, read_auth_bits
+from ublox_reader.utilities import DataParser
 
 # Test constants
 from tests.constants import *
@@ -73,10 +73,10 @@ class TestUtilities:
         """
         Test the time message utility adjust second
         """
-        assert timestampMessage_unix == adjust_second(
+        assert timestampMessage_unix == DataParser.adjust_second(
             ((raw_galWno * 604800 + raw_galTow) * 1000 + 935280000000) - (raw_leapS * 1000)
         )/1000, "Error adjusting time"
-        assert timestampMessage_galileo == adjust_second((raw_galWno * 604800 + raw_galTow)), \
+        assert timestampMessage_galileo == DataParser.adjust_second((raw_galWno * 604800 + raw_galTow)), \
             "Error adjusting time"
 
     def test_read_auth_bits(self):
@@ -84,67 +84,48 @@ class TestUtilities:
         Test if the auth_bits were read correctly
         """
         # Test read_auth_bit utility
-        assert read_auth_bits(TEST_AUTH_BYTES) == 0, "For this payload the 40 bits must be all zero"
+        assert DataParser.read_auth_bits(TEST_AUTH_BYTES) == 0, "For this payload the 40 bits must be all zero"
 
-    @pytest.mark.asyncio
-    async def test_parse_messages(self):
+    def test_parse_messages(self):
         """
         Test if the time message and the galileo message
         were parsed correctly
         """
-        # Get Event Loop
-        loop = asyncio.get_running_loop()
-        executor = ThreadPoolExecutor(max_workers=1)
+        # Get the current year
+        year = datetime.now().year
 
-        # Link the check data method to parse_message and to the event loop
-        store_data = partial(parse_message, check_data_to_store, loop)
+        # Instantiate Data Parser utility class
+        data_parser = DataParser()
 
-        # Time message
-        asyncio.ensure_future(loop.run_in_executor(executor, parse_time_message, TIME_MESSAGE_PAYLOAD))
-        asyncio.ensure_future(loop.run_in_executor(executor, store_data, GALILEO_MESSAGE_PAYLOAD))
+        # Analize the data
+        data_parser.parse_time_message(TIME_MESSAGE_PAYLOAD)
+        table, data_to_store = data_parser.parse_message(GALILEO_MESSAGE_PAYLOAD)
 
-        # Give some time to execute the coroutine
-        await asyncio.sleep(1)
-        # Close the executor
-        executor.shutdown(wait=True)
-
-
-async def check_data_to_store(table: str, data: tuple):
-    """
-    Check if the data were parsed correctly
-
-    :param table: A table inside the database the will contain those data
-    :param data: Data to check
-    """
-    # Get the current date
-    current = datetime.now()
-
-    # Check the table
-    assert table == f'"{current.year}_Italy_{raw_svId}"', "Error generating the table"
-
-    # Check timestamp
-    assert data[1] == timestampMessage_unix, "Wrong unix time stamp"
-    # Check time of the week
-    assert data[2] == raw_galTow, "raw_galTow wrong"
-    # Check week number
-    assert data[3] == raw_galWno, "raw_galWno wrong"
-    # Check leap seconds
-    assert data[4] == raw_leapS, "raw_leapS wrong"
-    # Check data
-    assert data[5] == GALILEO_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
-    # Check auth_bits as integer
-    assert data[6] == raw_auth, "Error converting auth_bits in a integer"
-    # Check service id
-    assert data[7] == raw_svId, "raw_svId wrong"
-    # Check num words
-    assert data[8] == raw_numWords, "raw_numWords wrong"
-    # Check galileo checksum B
-    assert data[9] == raw_ck_B, " Galileo raw_ck_B wrong"
-    # Check galileo checksum A
-    assert data[10] == raw_ck_A, "Galileo raw_ck_A wrong"
-    # Check time checksum A
-    assert data[11] == time_raw_ck_A, "Time raw_ck_A wrong"
-    # Check time checksum B
-    assert data[12] == time_raw_ck_B, "Time raw_ck_B wrong"
-    # Check time stamp message
-    assert data[13] == timestampMessage_galileo, "Wrong galileo timestamp"
+        # Check if the data were parsed correctly
+        assert table == f'{year}_Italy_{raw_svId}', "Error generating the table"
+        # Check timestamp
+        assert data_to_store[1] == timestampMessage_unix, "Wrong unix time stamp"
+        # Check time of the week
+        assert data_to_store[2] == raw_galTow, "raw_galTow wrong"
+        # Check week number
+        assert data_to_store[3] == raw_galWno, "raw_galWno wrong"
+        # Check leap seconds
+        assert data_to_store[4] == raw_leapS, "raw_leapS wrong"
+        # Check data
+        assert data_to_store[5] == GALILEO_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
+        # Check auth_bits as integer
+        assert data_to_store[6] == raw_auth, "Error converting auth_bits in a integer"
+        # Check service id
+        assert data_to_store[7] == raw_svId, "raw_svId wrong"
+        # Check num words
+        assert data_to_store[8] == raw_numWords, "raw_numWords wrong"
+        # Check galileo checksum B
+        assert data_to_store[9] == raw_ck_B, " Galileo raw_ck_B wrong"
+        # Check galileo checksum A
+        assert data_to_store[10] == raw_ck_A, "Galileo raw_ck_A wrong"
+        # Check time checksum A
+        assert data_to_store[11] == time_raw_ck_A, "Time raw_ck_A wrong"
+        # Check time checksum B
+        assert data_to_store[12] == time_raw_ck_B, "Time raw_ck_B wrong"
+        # Check time stamp message
+        assert data_to_store[13] == timestampMessage_galileo, "Wrong galileo timestamp"
