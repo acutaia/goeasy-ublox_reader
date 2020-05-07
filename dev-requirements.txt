@@ -6,10 +6,10 @@ bitarray>=1.2.1
 uvloop>=0.14.0
 
 # Testing
-pytest[testing]
-pytest-asyncio[testing]
-pytest-cov[testing]
+pytest
+pytest-asyncio
+pytest-cov
 
 # Documentation
-mkdocs[documentation]
-mkdocs-material[documentation]
+mkdocs
+mkdocs-material
