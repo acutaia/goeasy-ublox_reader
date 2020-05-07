@@ -32,7 +32,7 @@ from typing import Union
 from bitarray import bitarray
 
 # settings
-from ublox_reader.settings import config
+from .settings import config
 
 
 # ------------------------------------------------------------------------------

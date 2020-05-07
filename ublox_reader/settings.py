@@ -46,5 +46,11 @@ __docformat__ = "restructuredtext en"
 config = configparser.ConfigParser()
 """Config object"""
 
-config.read(os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'ublox_config.ini'))
+DEV_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'config/ublox_config.ini')
+"""Path for the configuration file in developer mode"""
+
+USER_PATH = "/etc/ublox-reader/config/ublox_config.ini"
+"""Path for the configuration file in user mode"""
+
+config.read((DEV_PATH, USER_PATH))
 """Read from configuration file"""

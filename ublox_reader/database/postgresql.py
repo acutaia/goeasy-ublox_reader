@@ -33,7 +33,7 @@ from aiologger import Logger
 from uvloop import Loop
 
 # constants
-from ublox_reader.database.constants import DB_HOST, DB_PORT, DB_USER, DB_PWD, DB, DataBaseException
+from .constants import DB_HOST, DB_PORT, DB_USER, DB_PWD, DB, DataBaseException
 
 # ------------------------------------------------------------------------------
 
@@ -63,8 +63,16 @@ class DataBase:
     # connection pool
     pool: asyncpg.pool.Pool = None
 
-    def __init__(self, logger, loop, host, port, user, password, database):
-        # type: ( Logger, Loop, str, int, str, str, str) -> None
+    def __init__(
+            self,
+            logger: Logger,
+            loop: Loop,
+            host: str,
+            port: int,
+            user: str,
+            password: str,
+            database: str
+    ) -> None:
         """
         Setup Database
 
@@ -143,7 +151,7 @@ class DataBase:
         # Setup made correctly, return self
         return self
 
-    async def create_database_if_not_exist(self):
+    async def create_database_if_not_exist(self) -> None:
         """
         Create a connection pool to the db.
         If the db doesn't exist, create it and assign to
@@ -202,8 +210,7 @@ class DataBase:
             # Connect to the newly created database.
             await self.create_database_if_not_exist()
 
-    async def store_data(self, table, data_to_store):
-        # type:(str, tuple) -> None
+    async def store_data(self, table: str, data_to_store: tuple) -> None:
         """
         Use a connection from the pool to insert the data in the db
         and check if the insertion is successful then release the
@@ -278,7 +285,7 @@ class DataBase:
             # store data in the new table
             await self.store_data(table, data_to_store)
 
-    async def close(self):
+    async def close(self) -> None:
         """
         Close all the connections to the Database
         """

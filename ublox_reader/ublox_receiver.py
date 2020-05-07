@@ -28,18 +28,18 @@ import asyncio
 import signal
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Union, Callable, Dict, Any
+from typing import Union, Dict, Any
 
 # Asynchronous libraries
 from aiologger.logger import Logger, LogLevel
 import uvloop
 
 # Ublox
-from ublox_reader.database.postgresql import DataBase
-from ublox_reader.serial.receiver import SerialReceiver
-from ublox_reader.database.constants import DataBaseException
-from ublox_reader.serial.constants import UbloxSerialException
-from ublox_reader.utilities import DataParser
+from .database.postgresql import DataBase
+from .serial.receiver import SerialReceiver
+from .database.constants import DataBaseException
+from .serial.constants import UbloxSerialException
+from .utilities import DataParser
 
 
 # Substitute asyncio loop with uvloop
@@ -75,11 +75,10 @@ class UbloxReceiver:
     logger: Logger = None
     # connection pool to the db
     db: DataBase = None
-    # data_to_store method
-    data_to_store: Callable = None
+    # data_to_store tuple
+    data_to_store: tuple = None
 
-    def __init__(self, loop):
-        # type: (uvloop.Loop) -> None
+    def __init__(self, loop: uvloop.Loop) -> None:
         """
         Set up UbloxReader
 
@@ -100,8 +99,8 @@ class UbloxReceiver:
         # queue containing the data to parse
         self.data_to_parse = asyncio.Queue()
 
-    @classmethod
-    def run(cls):
+    @staticmethod
+    def run() -> None:
         """
         Setup a Ublox Receiver and starts to get the data. In
         case of a keyboard interrupt, stop the Reader and cleanup
@@ -165,7 +164,7 @@ class UbloxReceiver:
         # Setup made correctly, return self
         return self
 
-    async def get_data(self):
+    async def get_data(self) -> None:
         """
         Read data from serial connection until obtain a ublox message.
         Once a message is obtained, put it in the queue of the
@@ -176,7 +175,7 @@ class UbloxReceiver:
                 # Put the message in a queue to parse it
                 self.loop.create_task(self.parse_data(message))
 
-    async def parse_data(self, data):
+    async def parse_data(self, data: bytes) -> None:
         """
         Parse data received from the serial connection, the data that are
         useful are only Time messages and Galileo messages. In case of one
@@ -213,8 +212,7 @@ class UbloxReceiver:
         # Schedule the cleanup of the loop
         loop.create_task(self.close_all_connections(msg=msg))
 
-    async def close_all_connections(self, msg=None):
-        # type:(Optional[str]) -> None
+    async def close_all_connections(self, msg: str = None) -> None:
         """
         Close gracefully all the connections
 
@@ -245,8 +243,8 @@ class UbloxReceiver:
         # Stop the loop
         self.loop.stop()
 
-    @classmethod
-    async def shut_down(cls):
+    @staticmethod
+    async def shut_down() -> None:
         """
         Cancel all pending tasks
         """

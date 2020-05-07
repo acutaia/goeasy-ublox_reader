@@ -65,8 +65,8 @@ class DummyUblox(UbloxReceiver):
     """
     serial: FakeSerialReceiver = None
 
-    @classmethod
-    def run(cls):
+    @staticmethod
+    def run() -> None:
         """
         Setup a Ublox Receiver and starts to get the data. In
         case of a keyboard interrupt, stop the Reader and cleanup
@@ -140,7 +140,7 @@ class DummyUblox(UbloxReceiver):
         """
         Trampoline function to check if the fake
         serial receiver is still sending data to the fake serial connection.
-        When the fake data are ended, it will raise an exception sto stop the execution
+        When the fake data are ended, it will raise an exception to stop the execution
         """
         if self.serial.start_simulation.is_alive():
             self.loop.call_later(1, self.stop_test)

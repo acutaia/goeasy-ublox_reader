@@ -25,7 +25,7 @@ Constants for SerialReceiver
 """
 
 # settings
-from ublox_reader.settings import config
+from ..settings import config
 
 # ------------------------------------------------------------------------------
 

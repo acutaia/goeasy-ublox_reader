@@ -33,7 +33,7 @@ from aioserial import AioSerial, SerialException
 from uvloop import Loop
 
 # constants
-from ublox_reader.serial.constants import *
+from .constants import *
 
 # ------------------------------------------------------------------------------
 
@@ -59,8 +59,13 @@ class SerialReceiver(AioSerial):
     Ubolox Receiver, reading the data following the
     format of the ublox communication protocol
     """
-    def __init__(self, logger, loop, port, baudrate):
-        # type: (Logger, Loop, str, int) -> None
+    def __init__(
+            self,
+            logger: Logger,
+            loop: Loop,
+            port: str,
+            baudrate: int
+    ) -> None:
         """
         Setup a SerialReceiver
 
@@ -109,8 +114,7 @@ class SerialReceiver(AioSerial):
         # Setup made correctly, return self
         return self
 
-    async def ublox_message(self):
-        # type: () -> AsyncIterable[bytearray]
+    async def ublox_message(self) -> AsyncIterable[bytes]:
         """
         Asynchronous generator
         that returns a ublox message at every iteration.
@@ -177,7 +181,7 @@ class SerialReceiver(AioSerial):
             # Raise exception
             raise UbloxSerialException(f"{datetime.now()} : ERROR : [Serial]: {error.args[0]}")
 
-    async def stop_serial(self):
+    async def stop_serial(self) -> None:
         """
         Method to stop the SerialReceiver
         """
