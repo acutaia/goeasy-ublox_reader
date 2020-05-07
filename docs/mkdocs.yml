@@ -1,0 +1,18 @@
+site_name: GoEasy
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: amber
+  language: en
+  logo: img/satellite.png
+  favicon: img/satellite.png
+
+nav:
+  - GoEasy: index.md
+  - features.md
+  - Tutorial:
+    - tutorial/index.md
+    - tutorial/another_page.md
+  - deployment.md
