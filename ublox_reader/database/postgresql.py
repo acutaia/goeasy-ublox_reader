@@ -25,11 +25,10 @@ Asynchronous database for UbloxReader
 
 # Standard library
 import asyncio
-from datetime import datetime
+from logging import Logger
 
 # Asynchronous libraries
 import asyncpg
-from aiologger import Logger
 from uvloop import Loop
 
 # constants
@@ -86,7 +85,6 @@ class DataBase:
         """
         # Logging
         self.logger = logger
-        self.lock = asyncio.Lock()
         # Event loop
         self.loop = loop
         # Database constants
@@ -134,16 +132,14 @@ class DataBase:
 
         except OSError as error:
             # Log the exception
-            await self.logger.error(f"{datetime.now()} : ERROR : "
-                                    f"[DataBase]: can't connect to the db {error.strerror}")
+            self.logger.error(f"can't connect to the db {error.strerror}")
 
             # raise exception to sto the execution
             raise DataBaseException
 
         except asyncpg.PostgresError as error:
             # Log the exception
-            await self.logger.error(f"{datetime.now()} : ERROR : "
-                                    f"[DataBase]: {str(error.as_dict())}")
+            self.logger.error(f"{str(error.as_dict())}")
 
             # raise exception to sto the execution
             raise DataBaseException
@@ -174,20 +170,17 @@ class DataBase:
                 timeout=self.timeout
             )
             # Database Log
-            await self.logger.info(f"{datetime.now()} : INFO : "
-                                   f"[DataBase]: created a connection pool to {self.host}")
+            self.logger.info(f"created a connection pool to {self.host}")
 
         except asyncio.TimeoutError:
             # log the error
-            await self.logger.error(f"{datetime.now()} : ERROR : "
-                                    f"[DataBase]: timeout reached, can't connect to the database")
+            self.logger.error("timeout reached, can't connect to the database")
             # raise exception to stop the execution
             raise DataBaseException
 
         except asyncpg.InvalidCatalogNameError:
             # Database does not exist, create it
-            self.logger.warning(f"{datetime.now()} : WARNING : "
-                                f"[DataBase]: database {self.database} doesn't exist")
+            self.logger.warning(f"database {self.database} doesn't exist")
 
             # create a single connection to the default user and the database template
             sys_conn = await asyncpg.connect(
@@ -204,8 +197,7 @@ class DataBase:
             # close the connection
             await sys_conn.close()
             # Database Log
-            self.logger.info(f"{datetime.now()} : INFO : "
-                             f"[DataBase]: created database {self.database}")
+            self.logger.info(f"created database {self.database}")
 
             # Connect to the newly created database.
             await self.create_database_if_not_exist()
@@ -248,8 +240,8 @@ class DataBase:
         # Check if the table does'nt exist
         except asyncpg.UndefinedTableError:
             # Log the error code
-            self.logger.warning(f"{datetime.now()} : WARNING : [DataBase]: "
-                                f"relation {table} doesn't exist")
+            self.logger.warning(f"relation {table} doesn't exist")
+
             # Create the table
             async with self.pool.acquire() as con:
                 await con.execute(
@@ -274,7 +266,7 @@ class DataBase:
                          '''
                 )
                 # Log
-                self.logger.info(f"{datetime.now()} : INFO : [DataBase]: relation {table} created")
+                self.logger.info(f"relation {table} created")
 
                 # Create a index for the table
                 await con.execute(
@@ -295,8 +287,8 @@ class DataBase:
 
         except asyncio.TimeoutError:
             # Timeout expired
-            await self.logger.warning(f"{datetime.now()} : WARN : [DataBase]: error closing the pool")
+            self.logger.warning("error closing the pool")
 
         finally:
             # Log
-            await self.logger.info(f"{datetime.now()} : INFO : [DataBase]: disconnected from {self.host}")
+            self.logger.info(f"disconnected from {self.host}")

@@ -24,7 +24,6 @@ Asynchronous serial receiver for UbloxReader
 """
 
 # Standard library
-from datetime import datetime
 from logging import Logger
 from typing import AsyncIterable
 
@@ -33,7 +32,7 @@ from aioserial import AioSerial, SerialException
 from uvloop import Loop
 
 # constants
-from .constants import *
+from .constants import SERIAL_PORT, SETUP_BYTES, SERIAL_BAUDRATE, UbloxSerialException
 
 # ------------------------------------------------------------------------------
 
@@ -97,18 +96,18 @@ class SerialReceiver(AioSerial):
             self = SerialReceiver(logger, loop, port, baudrate)
 
             # SerialReceiver Log
-            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: connected to {self.port}")
+            self.logger.info(f"connected to {self.port}")
 
             # Set up serial communication
             await self.writelines_async(SETUP_BYTES)
             # Log
-            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: setup bytes send")
+            self.logger.info("setup bytes send")
             # Shutdown  serial writer executor cause we won't write anymore serial data
             self._write_executor.shutdown()
 
         except SerialException as error:
             # Log the exception
-            await logger.error(f"{datetime.now()} : ERROR : [Serial]: {error.strerror}")
+            logger.error(f"{error.strerror}")
             # Set flag to stop the receiver
             raise UbloxSerialException
         # Setup made correctly, return self
@@ -158,7 +157,7 @@ class SerialReceiver(AioSerial):
         """
         if not self.start_reading:
             # Log the beginning fo reading data
-            await self.logger.info(f"{datetime.now()} : INFO : [Serial]: start reading")
+            self.logger.info("start reading")
             # set the flag
             self.start_reading = True
 
@@ -179,7 +178,7 @@ class SerialReceiver(AioSerial):
 
         except SerialException as error:
             # Raise exception
-            raise UbloxSerialException(f"{datetime.now()} : ERROR : [Serial]: {error.args[0]}")
+            raise UbloxSerialException(f"[Serial] : {error.args[0]}")
 
     async def stop_serial(self) -> None:
         """
@@ -190,4 +189,4 @@ class SerialReceiver(AioSerial):
         # Shutdown  serial reader  executor
         self._read_executor.shutdown(wait=False)
         # Log
-        await self.logger.info(f"{datetime.now()} : INFO : [Serial]: disconnected from {self.port}")
+        self.logger.info(f"disconnected from {self.port}")

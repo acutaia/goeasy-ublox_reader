@@ -24,6 +24,7 @@ Utility methods for Ublox Receiver
 """
 
 # standard library
+import logging
 import time
 from datetime import datetime
 from typing import Union
@@ -183,3 +184,46 @@ class DataParser:
 
         # return the value of those 40 bits as an integer
         return int.from_bytes(auth_bits.tobytes(), byteorder="little")
+
+# ------------------------------------------------------------------------------
+
+
+##########
+# LOGGER #
+##########
+
+
+class UbloxLogger:
+    """
+    A utility class which scope is to configure
+    the logging of the application
+    """
+    @staticmethod
+    def get_logger(name: str) -> logging.Logger:
+        """
+        Setup the logger instance
+
+        :param name: Name of the logger
+        :return: An instance of the standard library logger
+        """
+        # create logger
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+
+        # create console handler and set level to debug
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+
+        # create formatter
+        formatter = logging.Formatter('%(levelname)s : [%(name)s] : %(message)s')
+
+        # add formatter to ch
+        ch.setFormatter(formatter)
+
+        # add ch to logger
+        logger.addHandler(ch)
+
+        return logger
+
+
+

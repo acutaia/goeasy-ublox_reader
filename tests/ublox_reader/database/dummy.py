@@ -22,9 +22,11 @@ Dummy DataBase class useful for testing
     See the License for the specific language governing permissions and
     limitations under the License.
 """
+# Standard Library
+from logging import Logger
+
 # Asynchronous libraries
 import asyncpg
-from aiologger import Logger
 from uvloop import Loop
 
 # DataBase

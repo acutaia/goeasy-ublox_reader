@@ -25,14 +25,14 @@ Dummy UbloxReceiver class for testing
 # Standard library
 import signal
 import asyncio
+from logging import Logger
 from typing import Union
 
 # Asynchronous libraries
-from aiologger.logger import Logger, LogLevel
 from uvloop import Loop
 
 # Ublox
-from ublox_reader.ublox_receiver import UbloxReceiver
+from ublox_reader.ublox_receiver import UbloxReceiver, UbloxLogger
 from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver
 from tests.ublox_reader.database.dummy import DummyDataBase
 # Exceptions
@@ -63,6 +63,11 @@ class DummyUblox(UbloxReceiver):
     A class that simulates the behaviour of
     the UbloxReceiver
     """
+    # Database
+    db: DummyDataBase = None
+    # Logger
+    logger: Logger = UbloxLogger.get_logger("UbloxReceiver")
+    # Serial
     serial: FakeSerialReceiver = None
 
     @staticmethod
@@ -93,7 +98,7 @@ class DummyUblox(UbloxReceiver):
         # Add signals handler to close gracefully the receiver
         for s in signals:
             loop.add_signal_handler(
-                s, lambda sig=s: asyncio.create_task(ublox_reader.close_all_connections()))
+                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections()))
 
         # Set an exception handler to deal with the raised exceptions
         loop.set_exception_handler(ublox_reader.handle_exception)
@@ -122,8 +127,6 @@ class DummyUblox(UbloxReceiver):
         # Create an instance of UbloxReader
         self = DummyUblox(loop)
 
-        # Instantiate logger
-        self.logger = Logger.with_default_handlers(level=LogLevel.INFO)
         # disable for testing purpose
         self.logger.disabled = True
 

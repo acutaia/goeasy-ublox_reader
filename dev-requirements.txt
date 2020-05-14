@@ -1,5 +1,4 @@
 # Code
-aiologger>=0.5.0
 aioserial>=1.2.3
 asyncpg>=0.20.1
 bitarray>=1.2.1

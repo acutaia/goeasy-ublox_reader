@@ -25,6 +25,7 @@ Tests the ublox_reader.database package
 
 # Standard library
 import asyncio
+from logging import Logger
 from typing import Union
 
 # Test
@@ -32,13 +33,12 @@ import pytest
 
 # Asynchronous library
 import uvloop
-from aiologger import Logger
 
 # DummyDataBase
 from tests.constants import DATA_TO_STORE
 from tests.ublox_reader.database.dummy import DummyDataBase
 from ublox_reader.database.constants import DataBaseException
-
+from ublox_reader.utilities import UbloxLogger
 
 # ------------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ class TestDataBase:
     # instantiate in this way to fix the warning
     loop: Union[uvloop.Loop, asyncio.AbstractEventLoop] = None
     # add logger
-    logger: Logger = None
+    logger: Logger = UbloxLogger.get_logger("test")
 
     async def configure(self):
         """
@@ -80,8 +80,7 @@ class TestDataBase:
         # Get the event loop
         self.loop = asyncio.get_running_loop()
 
-        # Instantiate and disable the logger
-        self.logger = Logger.with_default_handlers(name="test", loop=self.loop)
+        # Disable the logger
         self.logger.disabled = True
 
     @pytest.mark.asyncio

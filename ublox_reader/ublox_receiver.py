@@ -26,12 +26,11 @@ Asynchronous Ublox Receiver
 # Standard library
 import asyncio
 import signal
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from logging import Logger
 from typing import Union, Dict, Any
 
 # Asynchronous libraries
-from aiologger.logger import Logger, LogLevel
 import uvloop
 
 # Ublox
@@ -39,7 +38,7 @@ from .database.postgresql import DataBase
 from .serial.receiver import SerialReceiver
 from .database.constants import DataBaseException
 from .serial.constants import UbloxSerialException
-from .utilities import DataParser
+from .utilities import DataParser, UbloxLogger
 
 
 # Substitute asyncio loop with uvloop
@@ -69,14 +68,14 @@ class UbloxReceiver:
     inserting in a PostgreSQL db the data
     retrieved from the serial connection
     """
-    # serial transmission
-    serial: SerialReceiver = None
-    # logger
-    logger: Logger = None
-    # connection pool to the db
-    db: DataBase = None
-    # data_to_store tuple
+    # Data_to_store tuple
     data_to_store: tuple = None
+    # Connection pool to the db
+    db: DataBase = None
+    # Logger
+    logger: Logger = UbloxLogger.get_logger("UbloxReceiver")
+    # Serial transmission
+    serial: SerialReceiver = None
 
     def __init__(self, loop: uvloop.Loop) -> None:
         """
@@ -125,7 +124,7 @@ class UbloxReceiver:
         # Add signals handler to close gracefully the receiver
         for s in signals:
             loop.add_signal_handler(
-                s, lambda sig=s: asyncio.create_task(ublox_reader.close_all_connections()))
+                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections()))
 
         # Set an exception handler to deal with the raised exceptions
         loop.set_exception_handler(ublox_reader.handle_exception)
@@ -152,14 +151,11 @@ class UbloxReceiver:
         # Create an instance of UbloxReader
         self = UbloxReceiver(loop)
 
-        # Instantiate logger
-        self.logger = Logger.with_default_handlers(name="UbloxReceiver", level=LogLevel.INFO)
-
         # Setup database
-        self.db = await DataBase.setup(self.logger, loop)
+        self.db = await DataBase.setup(UbloxLogger.get_logger("DataBase"), loop)
 
         # Setup serial connection
-        self.serial = await SerialReceiver.setup(self.logger, loop)
+        self.serial = await SerialReceiver.setup(UbloxLogger.get_logger("Serial"), loop)
 
         # Setup made correctly, return self
         return self
@@ -209,6 +205,7 @@ class UbloxReceiver:
         """
         # context["message"] will always be there; but context["exception"] may not
         msg = context.get("exception", context["message"])
+
         # Schedule the cleanup of the loop
         loop.create_task(self.close_all_connections(msg=msg))
 
@@ -221,10 +218,10 @@ class UbloxReceiver:
         # Check if there was an exception
         if msg:
             # Log the exception
-            await self.logger.error(msg)
+            self.logger.error(msg)
 
         # Log the closing of all the connections
-        await self.logger.warning(f"{datetime.now()} : WARNING : [UbloxReceiver]: closing all connections")
+        self.logger.warning("closing all connections")
 
         # Cancel all pending tasks
         await self.shut_down()
@@ -236,9 +233,7 @@ class UbloxReceiver:
         await self.db.close()
 
         # Log the exit from the application
-        await self.logger.info(f"{datetime.now()} : INFO : [UbloxReceiver]: shutdown completed")
-        # shutdown the logger
-        await self.logger.shutdown()
+        self.logger.info("shutdown completed")
 
         # Stop the loop
         self.loop.stop()

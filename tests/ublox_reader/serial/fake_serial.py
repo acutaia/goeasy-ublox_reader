@@ -28,10 +28,10 @@ import os
 import pty
 import time
 import threading
+from logging import Logger
 from typing import AsyncIterable, Union
 
 # Asynchronous libraries
-from aiologger import Logger
 from uvloop import Loop
 
 # SerialReceiver

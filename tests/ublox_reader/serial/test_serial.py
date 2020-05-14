@@ -26,6 +26,7 @@ Tests the ublox_reader.serial package
 # Standard library
 import asyncio
 import random
+from logging import Logger
 from typing import Union, List
 
 # Test
@@ -33,14 +34,13 @@ import pytest
 
 # Asynchronous Libraries
 import uvloop
-from aiologger import Logger
 
-# SerialReceiver constants
-from ublox_reader.serial.constants import UbloxSerialException
 
 # FakeSerialReceiver
-from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver
+from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver, UbloxSerialException
 from tests.constants import FAKE_DATA
+# Logger
+from ublox_reader.utilities import UbloxLogger
 
 # ------------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ class TestSerial:
     # instantiate in this way to fix the warning
     loop: Union[uvloop.Loop, asyncio.AbstractEventLoop] = None
     # add logger
-    logger: Logger = None
+    logger: Logger = UbloxLogger.get_logger("test")
     # message list
     message_list: List[Union[int, bytearray]] = None
     # random exception raised in a random iteration
@@ -89,8 +89,7 @@ class TestSerial:
         # Get the event loop
         self.loop = asyncio.get_running_loop()
 
-        # Instantiate and disable the logger
-        self.logger = Logger.with_default_handlers(name="test", loop=self.loop)
+        # Disable the logger
         self.logger.disabled = True
 
         # check if fake messages have to be stored
