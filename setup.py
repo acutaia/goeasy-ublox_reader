@@ -23,14 +23,46 @@ Ublox Reader app entry point
     limitations under the License.
 """
 
-from setuptools import setup, find_packages
 from os import path
+from setuptools import setup, find_packages, Command
+import subprocess
+
+# --------------------------------------------------------------------------------------------
 
 this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 VERSION = "1.0.0"
+
+
+# --------------------------------------------------------------------------------------------
+
+
+class InstallServiceCommand(Command):
+    """
+    Run install service
+    """
+    description = "Install ublox-reader.service"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        """
+        Run the command
+        """
+        current_dir_path = path.dirname(path.realpath(__file__))
+        create_service_script_path = path.join(current_dir_path, "create_service.sh")
+        subprocess.check_output([create_service_script_path])
+
+
+# --------------------------------------------------------------------------------------------
+
 
 setup(
     version=VERSION,
@@ -45,7 +77,6 @@ setup(
     python_requires=">=3.7",
     packages=find_packages(include=['ublox_reader', 'ublox_reader.*']),
     install_requires=[
-        'aiologger>=0.5.0',
         'aioserial>=1.2.3',
         'asyncpg>=0.20.1',
         'bitarray>=1.2.1',
@@ -58,6 +89,7 @@ setup(
             'ublox-reader = ublox_reader.ublox_receiver:UbloxReceiver.run'
         ]},
     data_files=[
-        (path.expanduser("/etc/ublox-reader/config/"), ["ublox_reader/config/*"])
-    ]
+        (path.expanduser("/etc/ublox-reader/config/"), ["ublox_reader/config/ublox_config.ini"])
+    ],
+    cmdclass={"install_service": InstallServiceCommand}
 )

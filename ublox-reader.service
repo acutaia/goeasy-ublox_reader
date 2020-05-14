@@ -1,0 +1,13 @@
+[Unit]
+Description= GoEasy ublox-reader service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ublox-reader
+Restart=always
+RestartSec=300
+
+[Install]
+WantedBy=multi-user.target
