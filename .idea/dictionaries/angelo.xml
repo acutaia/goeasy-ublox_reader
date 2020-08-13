@@ -1,9 +1,12 @@
 <component name="ProjectDictionaryState">
   <dictionary name="angelo">
     <words>
+      <w>aioserial</w>
       <w>asyncio</w>
+      <w>asyncpg</w>
       <w>authbit</w>
       <w>baudrate</w>
+      <w>bitarray</w>
       <w>contextvars</w>
       <w>cutaia</w>
       <w>delimeter</w>
