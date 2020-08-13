@@ -26,7 +26,6 @@ Asynchronous Ublox Receiver
 # Standard library
 import asyncio
 import signal
-from concurrent.futures import ThreadPoolExecutor
 from logging import Logger
 from typing import Union, Dict, Any
 
@@ -87,8 +86,6 @@ class UbloxReceiver:
         self.parser = DataParser()
         # stop event
         self.receiver_stop = asyncio.Event()
-        # executor to parse the data
-        self.parse_data_executor = ThreadPoolExecutor(max_workers=1)
         # event loop
         self.loop = loop
         # flag to notify the reception of a time message
