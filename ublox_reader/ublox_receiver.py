@@ -84,14 +84,10 @@ class UbloxReceiver:
         """
         # utility class
         self.parser = DataParser()
-        # stop event
-        self.receiver_stop = asyncio.Event()
         # event loop
         self.loop = loop
         # flag to notify the reception of a time message
         self.time_flag = False
-        # time lock
-        self.time_lock = asyncio.Lock()
         # queue containing the data to parse
         self.data_to_parse = asyncio.Queue()
 
