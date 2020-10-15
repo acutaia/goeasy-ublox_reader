@@ -79,7 +79,7 @@ setup(
     install_requires=[
         'aioserial>=1.3.0',
         'asyncpg>=0.21.0',
-        'bitarray>=1.5.1',
+        'bitarray>=1.5.3',
         'uvloop>=0.14.0'
     ],
     include_package_data=True,

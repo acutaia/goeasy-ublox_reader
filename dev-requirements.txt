@@ -1,14 +1,14 @@
 # Code
 aioserial>=1.3.0
 asyncpg>=0.21.0
-bitarray>=1.5.1
+bitarray>=1.5.3
 uvloop>=0.14.0
 
 # Testing
-pytest
-pytest-asyncio
-pytest-cov
+pytest>=6.1.1
+pytest-asyncio>=0.14.0
+pytest-cov>=2.10.1
 
 # Documentation
-mkdocs
-mkdocs-material
+mkdocs>=1.1.2
+mkdocs-material>=6.0.2
