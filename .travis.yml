@@ -13,5 +13,6 @@ install:
 
 before_script:
    - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" -U postgres
+   - sudo -u postgres pg_ctl reload
 script:
   - pytest --cov=ublox_reader tests
