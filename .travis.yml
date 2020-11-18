@@ -12,8 +12,7 @@ install:
   - pip install -r requirements.txt
 
 before_script:
-  - psql -c "CREATE USER foo WITH PASSWORD null;" -U postgres
-  - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" -U foo
+  - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
 
 script:
   - pytest --cov=ublox_reader tests
