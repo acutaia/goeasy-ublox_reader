@@ -12,7 +12,8 @@ install:
   - pip install -r requirements.txt
 
 before_script:
-  - mkdir config && cp ./tests/database.travis.yml config/database.yml
+  - psql -c "CREATE USER foo WITH PASSWORD null;" -U postgres
+  - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" -U foo
 
 script:
   - pytest --cov=ublox_reader tests
