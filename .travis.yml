@@ -8,11 +8,10 @@ python:
   - "3.7"
   - "3.8"
 
-before_install:
-  - sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres'"
-
 install:
   - pip install -r requirements.txt
 
+before_script:
+   - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" -U postgres
 script:
   - pytest --cov=ublox_reader tests
