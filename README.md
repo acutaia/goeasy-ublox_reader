@@ -1,4 +1,4 @@
 # GoEasy
 
-![image](docs/docs/img/logo_full.png)
+![image](img/logo_full.png)
 
