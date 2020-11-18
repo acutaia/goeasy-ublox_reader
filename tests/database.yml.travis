@@ -1,0 +1,7 @@
+development: &pgsql
+  adapter: postgresql
+  username: postgres
+  password: postgres
+
+test:
+  <<: *pgsql

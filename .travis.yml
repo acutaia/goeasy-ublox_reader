@@ -12,8 +12,8 @@ install:
   - pip install -r requirements.txt
 
 before_script:
-   - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" -U postgres
-   - sudo service postgresql restart
+  - cp tests/database.yml.travis config/database.yml
+
 
 script:
   - pytest --cov=ublox_reader tests
