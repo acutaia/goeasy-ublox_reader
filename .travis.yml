@@ -12,7 +12,10 @@ install:
   - pip install -r requirements.txt
 
 before_script:
-  - psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+  - psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 
 script:
   - pytest --cov=ublox_reader tests
+
+after_success:
+  - coveralls
