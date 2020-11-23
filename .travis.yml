@@ -18,4 +18,5 @@ script:
   - pytest --cov=ublox_reader tests
 
 after_success:
+  - coverage run --source= ublox_reader pytest tests/
   - coveralls
