@@ -136,8 +136,8 @@ class DataParser:
         # auth bit are encoded in 8 bytes from byte 28 to byte 36
         raw_auth_bits = DataParser.read_auth_bits(data[28:36])
         raw_num_words = data[8]
-        raw_ck_a = data[48]
-        raw_ck_b = data[49]
+        raw_ck_a = data[-2]
+        raw_ck_b = data[-1]
 
         # TODO: currently not needed data
         #  const reserved1 = data[6]
