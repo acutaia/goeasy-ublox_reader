@@ -75,7 +75,7 @@ class TestUtilities:
         """
         assert timestampMessage_unix == DataParser.adjust_second(
             ((raw_galWno * 604800 + raw_galTow) * 1000 + 935280000000) - (raw_leapS * 1000)
-        )/1000, "Error adjusting time"
+        ), "Error adjusting time"
         assert timestampMessage_galileo == DataParser.adjust_second((raw_galWno * 604800 + raw_galTow)), \
             "Error adjusting time"
 
