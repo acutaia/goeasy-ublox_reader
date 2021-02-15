@@ -60,7 +60,7 @@ raw_galWno = 1073
 raw_leapS = 18
 """Galileo leap seconds"""
 
-timestampMessage_unix = 1584609709.997
+timestampMessage_unix = 1584609709997
 """Time stamp of the message in a unix system"""
 
 timestampMessage_galileo = 649329725
@@ -113,7 +113,7 @@ raw_ck_B = 124
 
 
 DATA_TO_STORE = (
-    time.time(),
+    time.time()*1000,
     timestampMessage_unix,
     raw_galTow,
     raw_galWno,
