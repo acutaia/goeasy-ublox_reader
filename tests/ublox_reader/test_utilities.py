@@ -86,6 +86,14 @@ class TestUtilities:
         # Test read_auth_bit utility
         assert DataParser.read_auth_bits(TEST_AUTH_BYTES) == 0, "For this payload the 40 bits must be all zero"
 
+    def test_extract_galileo_data(self):
+        """
+        Test if the galileo data are extracted correctly
+        """
+        assert DataParser.extract_galileo_data(
+            UBLOX_MESSAGE_PAYLOAD[12:44]
+        ) == GALILEO_MESSAGE_PAYLOAD, "Error during the extraction"
+
     def test_parse_messages(self):
         """
         Test if the time message and the galileo message
@@ -97,9 +105,9 @@ class TestUtilities:
         # Instantiate Data Parser utility class
         data_parser = DataParser()
 
-        # Analize the data
+        # Analyze the data
         data_parser.parse_time_message(TIME_MESSAGE_PAYLOAD)
-        table, data_to_store = data_parser.parse_message(GALILEO_MESSAGE_PAYLOAD)
+        table, data_to_store = data_parser.parse_message(UBLOX_MESSAGE_PAYLOAD)
 
         # Check if the data were parsed correctly
         assert table == f'{year}_Italy_{raw_svId}', "Error generating the table"
@@ -111,21 +119,25 @@ class TestUtilities:
         assert data_to_store[3] == raw_galWno, "raw_galWno wrong"
         # Check leap seconds
         assert data_to_store[4] == raw_leapS, "raw_leapS wrong"
-        # Check data
-        assert data_to_store[5] == GALILEO_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
+        # Check ublox_data
+        assert data_to_store[5] == UBLOX_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
+        # Check galileo_data
+        assert data_to_store[6] == GALILEO_MESSAGE_PAYLOAD, "Error converting the bytes in a hex string"
         # Check auth_bits as integer
-        assert data_to_store[6] == raw_auth, "Error converting auth_bits in a integer"
+        assert data_to_store[7] == raw_auth, "Error converting auth_bits in a integer"
         # Check service id
-        assert data_to_store[7] == raw_svId, "raw_svId wrong"
+        assert data_to_store[8] == raw_svId, "raw_svId wrong"
         # Check num words
-        assert data_to_store[8] == raw_numWords, "raw_numWords wrong"
+        assert data_to_store[9] == raw_numWords, "raw_numWords wrong"
         # Check galileo checksum B
-        assert data_to_store[9] == raw_ck_B, " Galileo raw_ck_B wrong"
+        assert data_to_store[10] == raw_ck_B, " Galileo raw_ck_B wrong"
         # Check galileo checksum A
-        assert data_to_store[10] == raw_ck_A, "Galileo raw_ck_A wrong"
+        assert data_to_store[11] == raw_ck_A, "Galileo raw_ck_A wrong"
         # Check time checksum A
-        assert data_to_store[11] == time_raw_ck_A, "Time raw_ck_A wrong"
+        assert data_to_store[12] == time_raw_ck_A, "Time raw_ck_A wrong"
         # Check time checksum B
-        assert data_to_store[12] == time_raw_ck_B, "Time raw_ck_B wrong"
+        assert data_to_store[13] == time_raw_ck_B, "Time raw_ck_B wrong"
+        # Check osnma
+        assert data_to_store[14] == -1, "OSNMA wrong"
         # Check time stamp message
-        assert data_to_store[13] == timestampMessage_galileo, "Wrong galileo timestamp"
+        assert data_to_store[15] == timestampMessage_galileo, "Wrong galileo timestamp"

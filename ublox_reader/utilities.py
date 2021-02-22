@@ -138,6 +138,8 @@ class DataParser:
         raw_num_words = data[8]
         raw_ck_a = data[-2]
         raw_ck_b = data[-1]
+        # Galileo Data are encoded from byte 12 to byte 44
+        galileo_data = DataParser.extract_galileo_data(data[12:44])
 
         # TODO: currently not needed data
         #  const reserved1 = data[6]
@@ -155,6 +157,7 @@ class DataParser:
             self.raw_gal_wno,
             self.raw_leap_s,
             data.hex(),
+            galileo_data,
             raw_auth_bits,
             raw_sv_id,
             raw_num_words,
@@ -162,6 +165,7 @@ class DataParser:
             raw_ck_a,
             self.time_raw_ck_a,
             self.time_raw_ck_b,
+            -1,
             self.timestamp_message_galileo
         )
 
@@ -173,7 +177,7 @@ class DataParser:
         :param data: The 8 bytes to analise
         :return: An integer which represents the 40 auth bits
         """
-        # initialize the array
+        # Initialize the array
         auth_bits = bitarray(endian="little")
 
         # get the 64 bits
@@ -184,6 +188,30 @@ class DataParser:
 
         # return the value of those 40 bits as an integer
         return int.from_bytes(auth_bits.tobytes(), byteorder="little")
+
+    @staticmethod
+    def extract_galileo_data(data: bytes) -> str:
+        """
+        Utility method to extract galileo data from ublox message
+
+        :param data: payload
+        :return: bytes in hex format
+        """
+        # Invert the data and remove the padding
+        wordA = data[3::-1]
+        wordB = data[7:3:-1]
+        wordC = data[11:7:-1]
+        wordD = data[15:12:-1]  # padding removed
+        wordE = data[19:15:-1]
+        wordF = data[23:19: -1]
+        wordG = data[27:23:-1]
+        wordH = data[31:28:-1]  # padding removed
+
+        # generate the galileo data
+        galileo_data = wordA+wordB+wordC+wordD+wordE+wordF+wordG+wordH
+
+        return galileo_data.hex()
+
 
 # ------------------------------------------------------------------------------
 

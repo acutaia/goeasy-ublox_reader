@@ -225,6 +225,7 @@ class DataBase:
                 raw_galwno,
                 raw_leaps,
                 raw_data,
+                galileo_data,
                 raw_authbit,
                 raw_svid,
                 raw_numwords,
@@ -232,8 +233,9 @@ class DataBase:
                 raw_ck_a,
                 raw_ck_a_time,
                 raw_ck_b_time,
+                osnma,
                 timestampmessage_galileo
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);''',
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);''',
                 *data_to_store
             )
 
@@ -254,6 +256,7 @@ class DataBase:
                         raw_galwno integer,
                         raw_leaps integer,
                         raw_data text,
+                        galileo_data text,
                         raw_authbit bigint,
                         raw_svid integer,
                         raw_numwords integer,
@@ -261,6 +264,7 @@ class DataBase:
                         raw_ck_a integer,
                         raw_ck_a_time integer,
                         raw_ck_b_time integer,
+                        osnma integer,
                         timestampmessage_galileo bigint
                         );
                          '''
