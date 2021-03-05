@@ -131,3 +131,8 @@ SETUP_BYTES = [
 Bytes used to setup the Serial Receiver in order to disable/enable 
 a specific message
 """
+
+DELIMETER = bytes([0xB5, 0x62])
+"""
+Delimeter of every Ublox Message
+"""

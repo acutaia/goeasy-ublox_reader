@@ -88,7 +88,7 @@ class DataParser:
         """
         # Save the time of the message reception
         self.year = datetime.now().year
-        self.reception_time = time.time()*1000 # expressed in ms
+        self.reception_time = time.time() * 1000  # expressed in ms
 
         # Read RAW data from the message
         self.raw_gal_tow = int.from_bytes(data[8:12], byteorder="little")
@@ -100,7 +100,7 @@ class DataParser:
         # Compute time using all the data read from raw data
         self.timestamp_message_unix = DataParser.adjust_second(
                 ((self.raw_gal_wno * 604800 + self.raw_gal_tow) * 1000 + 935280000000) - (self.raw_leap_s * 1000)
-            ) # (expressed in ms)
+            )  # (expressed in ms)
 
         self.timestamp_message_galileo = DataParser.adjust_second((self.raw_gal_wno * 604800 + self.raw_gal_tow))
 

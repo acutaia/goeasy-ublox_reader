@@ -32,7 +32,7 @@ from aioserial import AioSerial, SerialException
 from uvloop import Loop
 
 # constants
-from .constants import SERIAL_PORT, SETUP_BYTES, SERIAL_BAUDRATE, UbloxSerialException
+from .constants import SERIAL_PORT, SETUP_BYTES, SERIAL_BAUDRATE, DELIMETER, UbloxSerialException
 
 # ------------------------------------------------------------------------------
 
@@ -77,6 +77,12 @@ class SerialReceiver(AioSerial):
         self.logger = logger  # type: Logger
         # reading flag
         self.start_reading = False  # type: bool
+
+        # ublox-message flags
+        self.first_ublox_message_after_cleaning = False
+        self.ublox_messages = False
+        self.cleaning_ublox_buffer = True
+        self.ublox_counter = 0
 
     @classmethod
     async def setup(cls, logger, loop, port=SERIAL_PORT, baudrate=SERIAL_BAUDRATE):
@@ -162,19 +168,69 @@ class SerialReceiver(AioSerial):
             self.start_reading = True
 
         try:
-            # Empty message
-            message = bytearray()
 
-            # Read the Preamble and discard it cause we don't need it
-            await self.read_async(2)
+            # Check if we need to clean the buffer
+            if self.cleaning_ublox_buffer:
+                # Version 8 of ublox receiver has some incorrect buffer data sent after the setup
 
-            # Save the first useful data (4 bytes)
-            message.extend(await self.read_async(4))
+                # Remove the delimeter
+                message = bytes(await self.read_until_async(DELIMETER))[:-2]
+                len_message = len(message)
 
-            # Save the payload of the message and the two final bytes (checksum)
-            message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
-            # Give the message
-            yield bytes(message)
+                # Check if the message has an acceptable size
+                while len_message < 24:
+                    message = bytes(await self.read_until_async(DELIMETER))[:-2]
+                    len_message = len(message)
+
+                # Give the message
+                yield message
+
+                # Increase the number of correct sent messages
+                self.ublox_counter += 1
+
+                # Check if we sent at least 5 correct messages
+                if self.ublox_counter == 5:
+
+                    # Set the flags
+                    self.cleaning_ublox_buffer = False
+                    self.first_ublox_message_after_cleaning = True
+                    return
+
+            # Check the status of this message
+            elif self.first_ublox_message_after_cleaning:
+                # This message doesn't have the delimeter at the beginning cause it was cleaned with the buffer
+
+                # Empty message
+                message = bytearray()
+                # Save the first useful data (4 bytes)
+                message.extend(await self.read_async(4))
+
+                # Save the payload of the message and the two final bytes (checksum)
+                message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
+                # Give the message
+                yield bytes(message)
+
+                # Set the flags
+                self.first_ublox_message_after_cleaning = False
+                self.ublox_messages = True
+
+                return
+
+            # Check if the messages are already cleaned
+            elif self.ublox_messages:
+                # Empty message
+                message = bytearray()
+
+                # Read the Preamble and discard it cause we don't need it
+                await self.read_async(2)
+
+                # Save the first useful data (4 bytes)
+                message.extend(await self.read_async(4))
+
+                # Save the payload of the message and the two final bytes (checksum)
+                message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
+                # Give the message
+                yield bytes(message)
 
         except SerialException as error:
             # Raise exception
