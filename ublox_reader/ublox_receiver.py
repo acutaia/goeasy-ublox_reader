@@ -172,7 +172,7 @@ class UbloxReceiver:
         a Time message was already received. Then schedule the storing of useful data in the database
         """
         # This is a TIME message
-        if data[0] == 1:
+        if data[0] == 1 and data[1] == 37:
             # Set the received time message flag
             self.time_flag = True
             # Analyze the message in a executor
