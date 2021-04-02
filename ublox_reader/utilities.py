@@ -24,9 +24,9 @@ Utility methods for Ublox Receiver
 """
 
 # standard library
+from datetime import datetime
 import logging
 import time
-from datetime import datetime
 from typing import Union
 
 # bit utilities
@@ -59,6 +59,7 @@ class DataParser:
     A utility class which scope is to extract
     information from the ublox_messages
     """
+
     # Where the serial receiver is physically connected
     nation: str = config.get("COUNTRY", "NATION")
 
@@ -76,6 +77,12 @@ class DataParser:
     # Checksum
     time_raw_ck_a: int = None
     time_raw_ck_b: int = None
+
+    # Meaconing
+    threshold = config.get("THRESHOLD", "MEACONING_TH")
+    drift: int = None
+    bias: int = None
+    attack: bool = False
 
     def parse_time_message(self, data: bytes) -> None:
         """
@@ -99,10 +106,50 @@ class DataParser:
 
         # Compute time using all the data read from raw data
         self.timestamp_message_unix = DataParser.adjust_second(
-                ((self.raw_gal_wno * 604800 + self.raw_gal_tow) * 1000 + 935280000000) - (self.raw_leap_s * 1000)
-            )  # (expressed in ms)
+            ((self.raw_gal_wno * 604800 + self.raw_gal_tow) * 1000 + 935280000000)
+            - (self.raw_leap_s * 1000)
+        )  # (expressed in ms)
 
-        self.timestamp_message_galileo = DataParser.adjust_second((self.raw_gal_wno * 604800 + self.raw_gal_tow))
+        self.timestamp_message_galileo = DataParser.adjust_second(
+            (self.raw_gal_wno * 604800 + self.raw_gal_tow)
+        )
+
+    def parse_clock_message(self, data: bytes) -> None:
+        """
+        Parse the clock message to detect meaconing attacks
+
+        :param data: clock message
+        :return:
+        """
+
+        # Check if we already received a message
+        if self.bias and self.drift:
+            current_drift = data[11]
+            current_bias = data[7]
+
+            # Attack attack false condition
+            if current_drift < self.threshold and (
+                    abs(current_bias - self.bias) < self.threshold
+                    or (
+                        (1000 - self.threshold)
+                        < abs(current_bias - self.bias)
+                        < 1000 + self.threshold
+                    )
+
+            ):
+                self.attack = False
+
+            else:
+                self.attack = True
+
+            # Update bias and drift
+            self.bias = current_bias
+            self.drift = current_drift
+
+        else:
+            # first clock message received
+            self.bias = data[7]
+            self.drift = data[11]
 
     @staticmethod
     def adjust_second(seconds: Union[float, int]) -> Union[float, int]:
@@ -131,6 +178,7 @@ class DataParser:
         :param data: bytes to analise
         :return: Table name and the tuple of data to store
         """
+
         # Read all data
         raw_sv_id = data[5]
         # auth bit are encoded in 8 bytes from byte 28 to byte 36
@@ -140,6 +188,13 @@ class DataParser:
         raw_ck_b = data[-1]
         # Galileo Data are encoded from byte 12 to byte 44
         galileo_data = DataParser.extract_galileo_data(data[12:44])
+
+        # Check if we are under attack
+        if self.attack:
+            authenticity = 0
+        else:
+            # Unknown authenticity cause we have to check OSNMA
+            authenticity = -1
 
         # TODO: currently not needed data
         #  const reserved1 = data[6]
@@ -165,8 +220,8 @@ class DataParser:
             raw_ck_a,
             self.time_raw_ck_a,
             self.time_raw_ck_b,
-            -1,
-            self.timestamp_message_galileo
+            authenticity,
+            self.timestamp_message_galileo,
         )
 
     @staticmethod
@@ -203,12 +258,12 @@ class DataParser:
         wordC = data[11:7:-1]
         wordD = data[15:12:-1]  # padding removed
         wordE = data[19:15:-1]
-        wordF = data[23:19: -1]
+        wordF = data[23:19:-1]
         wordG = data[27:23:-1]
         wordH = data[31:28:-1]  # padding removed
 
         # generate the galileo data
-        galileo_data = wordA+wordB+wordC+wordD+wordE+wordF+wordG+wordH
+        galileo_data = wordA + wordB + wordC + wordD + wordE + wordF + wordG + wordH
 
         return galileo_data.hex()
 
@@ -226,6 +281,7 @@ class UbloxLogger:
     A utility class which scope is to configure
     the logging of the application
     """
+
     @staticmethod
     def get_logger(name: str) -> logging.Logger:
         """
@@ -243,7 +299,7 @@ class UbloxLogger:
         ch.setLevel(logging.INFO)
 
         # create formatter
-        formatter = logging.Formatter('%(levelname)s : [%(name)s] : %(message)s')
+        formatter = logging.Formatter("%(levelname)s : [%(name)s] : %(message)s")
 
         # add formatter to ch
         ch.setFormatter(formatter)
@@ -252,6 +308,3 @@ class UbloxLogger:
         logger.addHandler(ch)
 
         return logger
-
-
-

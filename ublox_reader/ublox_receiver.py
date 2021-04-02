@@ -178,6 +178,12 @@ class UbloxReceiver:
             # Analyze the message in a executor
             self.parser.parse_time_message(data)
             return
+
+        # This is a CLOCK message
+        elif data[0] == 1 and data[1] == 34 and self.time_flag:
+            self.parser.parse_clock_message(data)
+            return
+
         # This is a GNSS message
         elif data[0] == 2 and self.time_flag:
             # Check if it's a GALILEO message
@@ -186,6 +192,7 @@ class UbloxReceiver:
                 # Analyze the message in a executor and scheduling the storing of the data
                 table_name, data_to_store = self.parser.parse_message(data)
                 await self.db.store_data(table_name, data_to_store)
+                # TODO: if not self.parser.attack convolution
 
     def handle_exception(self, loop, context):
         # type: (Union[asyncio.AbstractEventLoop, uvloop.Loop], Dict[str, Any]) -> None
