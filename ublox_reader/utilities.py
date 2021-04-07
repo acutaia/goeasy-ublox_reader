@@ -124,8 +124,8 @@ class DataParser:
 
         # Check if we already received a message
         if self.bias and self.drift:
-            current_drift = int.from_bytes(data[11:15], byteorder="little", signed=True)
-            current_bias = int.from_bytes(data[7:11], byteorder="little", signed=True)
+            current_drift = int.from_bytes(data[12:16], byteorder="little", signed=True)
+            current_bias = int.from_bytes(data[8:12], byteorder="little", signed=True)
 
             # Attack attack false condition
             if current_drift < self.threshold and (
@@ -148,8 +148,8 @@ class DataParser:
 
         else:
             # first clock message received
-            self.bias = int.from_bytes(data[7:11], byteorder="little", signed=True)
-            self.drift = int.from_bytes(data[11:15], byteorder="little", signed=True)
+            self.bias = int.from_bytes(data[8:12], byteorder="little", signed=True)
+            self.drift = int.from_bytes(data[12:16], byteorder="little", signed=True)
 
     @staticmethod
     def adjust_second(seconds: Union[float, int]) -> Union[float, int]:
