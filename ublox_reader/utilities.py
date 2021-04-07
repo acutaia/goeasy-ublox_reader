@@ -79,7 +79,7 @@ class DataParser:
     time_raw_ck_b: int = None
 
     # Meaconing
-    threshold = config.get("THRESHOLD", "MEACONING_TH")
+    threshold = int(config.get("THRESHOLD", "MEACONING_TH"))
     drift: int = None
     bias: int = None
     attack: bool = False
@@ -99,7 +99,7 @@ class DataParser:
 
         # Read RAW data from the message
         self.raw_gal_tow = int.from_bytes(data[8:12], byteorder="little")
-        self.raw_gal_wno = int.from_bytes(data[16:18], byteorder="little")
+        self.raw_gal_wno = int.from_bytes(data[16:18], byteorder="little", signed=True)
         self.raw_leap_s = data[18]
         self.time_raw_ck_a = data[24]
         self.time_raw_ck_b = data[25]
@@ -124,8 +124,8 @@ class DataParser:
 
         # Check if we already received a message
         if self.bias and self.drift:
-            current_drift = data[11]
-            current_bias = data[7]
+            current_drift = int.from_bytes(data[11:15], byteorder="little", signed=True)
+            current_bias = int.from_bytes(data[7:11], byteorder="little", signed=True)
 
             # Attack attack false condition
             if current_drift < self.threshold and (
@@ -148,8 +148,8 @@ class DataParser:
 
         else:
             # first clock message received
-            self.bias = data[7]
-            self.drift = data[11]
+            self.bias = int.from_bytes(data[7:11], byteorder="little", signed=True)
+            self.drift = int.from_bytes(data[11:15], byteorder="little", signed=True)
 
     @staticmethod
     def adjust_second(seconds: Union[float, int]) -> Union[float, int]:

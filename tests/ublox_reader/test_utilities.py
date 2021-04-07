@@ -141,3 +141,16 @@ class TestUtilities:
         assert data_to_store[14] == -1, "OSNMA wrong"
         # Check time stamp message
         assert data_to_store[15] == timestampMessage_galileo, "Wrong galileo timestamp"
+
+    def test_meaconing_messages(self):
+        """
+        Test if the meaconing is detected well
+        """
+        # Instantiate Data Parser utility class
+        data_parser = DataParser()
+        data_parser.parse_clock_message(b'\x01"\x14\x00\xb8zC\x11&z\r\x00\xa0\x00\x00\x00\t\x00\x00\x00v\x03\x00\x00\x8c\x08')
+        data_parser.parse_clock_message(b'\x01"\x14\x00\xa0~C\x11\xc6z\r\x00\xa0\x00\x00\x00\t\x00\x00\x00f\x03\x00\x00\x084')
+        assert data_parser.attack is False, "Those data are consecutive"
+
+        data_parser.parse_clock_message(b'\x01"\x14\x00@\x8eC\x11D}\r\x00\x9f\x00\x00\x00\t\x00\x00\x00F\x03\x00\x00\x18e')
+        assert data_parser.attack is True, "Those data aren't consecutive"
