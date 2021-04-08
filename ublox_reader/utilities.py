@@ -131,9 +131,9 @@ class DataParser:
             if current_drift < self.threshold and (
                     abs(current_bias - self.bias) < self.threshold
                     or (
-                        (1000 - self.threshold)
+                        (1_000_000 - self.threshold)
                         < abs(current_bias - self.bias)
-                        < 1000 + self.threshold
+                        < 1_000_000 + self.threshold
                     )
 
             ):
