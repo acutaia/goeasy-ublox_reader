@@ -364,7 +364,8 @@ class DataParser:
 
         # Check if we have enough elements stored in memory
         if len(self.valid_data_to_store.keys()) == 60:
-            # from Python3.7+ dicts are ordered by default
+
+            # Store offset value
             old_offset = self.offset
             self.offset += 50
 
