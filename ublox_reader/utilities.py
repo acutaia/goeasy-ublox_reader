@@ -240,7 +240,7 @@ class DataParser:
             asyncio.create_task(
                 self.validate_data(
                     timestamp,
-                    galileo_data_in_bytes[0:15],
+                    galileo_data_in_bytes[:15],
                     raw_sv_id,
                 )
             )
@@ -251,11 +251,6 @@ class DataParser:
                     galileo_data_in_bytes[15:],
                     raw_sv_id,
                 )
-            )
-
-            # Schedule the validation of the second half of the data
-            asyncio.create_task(
-                self.validate_data(timestamp + 1, galileo_data_in_bytes[15:], raw_sv_id)
             )
 
         # Check if we are under attack
