@@ -40,7 +40,6 @@ import numpy as np
 # settings
 from .settings import config
 
-
 # ------------------------------------------------------------------------------
 
 
@@ -50,6 +49,7 @@ __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
+
 
 # ------------------------------------------------------------------------------
 
@@ -365,7 +365,10 @@ class DataParser:
             self.offset += 20
 
             # Data to store
-            store = {key: self.valid_data_to_store[key] for key in range(old_offset, self.offset)}
+            store = {
+                key: self.valid_data_to_store[key]
+                for key in range(old_offset, self.offset)
+            }
 
             # Clean the internal storage
             for key in range(old_offset, self.offset):
@@ -438,7 +441,7 @@ class DataParser:
         interleaved[:10] = sinc[:]
 
         for row in range(n_row):
-            interleaved[10 + row * n_col : 10 + (row * n_col) + n_col] = interleaver[
+            interleaved[10 + (row * n_col) : 10 + (row * n_col) + n_col] = interleaver[
                 row, :
             ]
 
