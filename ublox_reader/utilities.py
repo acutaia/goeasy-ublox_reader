@@ -339,18 +339,15 @@ class DataParser:
         # Get the event loop
         loop = asyncio.get_running_loop()
 
-        # Validate the data and store them
-        async with self.internal_lock:
-            validated_first = await loop.run_in_executor(
+        validated_first = await loop.run_in_executor(
                 self.executor, self.convolution, first_part
             )
+        validated_second = await loop.run_in_executor(
+            self.executor, self.convolution, second_part
+        )
+        async with self.internal_lock:
             await self._store_internally_data(timestamp, validated_first, satellite_id)
-            validated_second = await loop.run_in_executor(
-                self.executor, self.convolution, second_part
-            )
-            await self._store_internally_data(
-                timestamp + 1, validated_second, satellite_id
-            )
+            await self._store_internally_data(timestamp + 1, validated_second, satellite_id)
 
     async def _store_internally_data(
         self, timestamp: int, data: str, satellite_id: int
