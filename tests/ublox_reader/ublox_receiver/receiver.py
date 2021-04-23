@@ -23,9 +23,11 @@ Dummy UbloxReceiver class for testing
     limitations under the License.
 """
 # Standard library
-import signal
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
 from logging import Logger
+import signal
 from typing import Union
 
 # Asynchronous libraries
@@ -90,6 +92,10 @@ class DummyUblox(UbloxReceiver):
         try:
             # Setup the Reader
             ublox_reader: DummyUblox = loop.run_until_complete(DummyUblox.set_up(loop))
+            ublox_reader.parser.validation_active = True
+            ublox_reader.parser.executor = ThreadPoolExecutor(max_workers=3)
+            ublox_reader.parser.file_path = "convolved_data.txt"
+            ublox_reader.parser.valid_data_to_store = defaultdict(list)
 
         except (DataBaseException, UbloxSerialException):
             # Something went wrong

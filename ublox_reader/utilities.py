@@ -24,13 +24,19 @@ Utility methods for Ublox Receiver
 """
 
 # standard library
+import asyncio
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import datetime
+from itertools import islice
 import logging
 import time
-from typing import Union
+from typing import Union, List, Dict
 
-# bit utilities
+# Third Party
 from bitarray import bitarray
+import numpy as np
 
 # settings
 from .settings import config
@@ -45,6 +51,23 @@ __version__ = ".".join(str(x) for x in __version_info__)
 
 # Documentation strings format
 __docformat__ = "restructuredtext en"
+
+# ------------------------------------------------------------------------------
+
+
+##################
+# DATA VALIDATED #
+##################
+
+
+@dataclass(eq=False)
+class Validated:
+    satellite_id: int
+    """Satellite identifier"""
+
+    data_validated: str
+    """Data validated"""
+
 
 # ------------------------------------------------------------------------------
 
@@ -83,6 +106,13 @@ class DataParser:
     drift: int = None
     bias: int = None
     attack: bool = False
+
+    # Validation
+    file_path: str = config.get("VALIDATION", "PATH")
+    validation_active: bool = config.getboolean("VALIDATION", "ACTIVE")
+    if validation_active:
+        executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=3)
+        valid_data_to_store: Dict[int, List[Validated]] = defaultdict(list)
 
     def parse_time_message(self, data: bytes) -> None:
         """
@@ -129,13 +159,12 @@ class DataParser:
 
             # Attack attack false condition
             if current_drift < self.threshold and (
-                    abs(current_bias - self.bias) < self.threshold
-                    or (
-                        (1_000_000 - self.threshold)
-                        < abs(current_bias - self.bias)
-                        < 1_000_000 + self.threshold
-                    )
-
+                abs(current_bias - self.bias) < self.threshold
+                or (
+                    (1_000_000 - self.threshold)
+                    < abs(current_bias - self.bias)
+                    < 1_000_000 + self.threshold
+                )
             ):
                 self.attack = False
 
@@ -188,6 +217,27 @@ class DataParser:
         raw_ck_b = data[-1]
         # Galileo Data are encoded from byte 12 to byte 44
         galileo_data = DataParser.extract_galileo_data(data[12:44])
+
+        # Check if the validation is active
+        if self.validation_active:
+            galileo_data_in_bytes = bytes.fromhex(galileo_data)
+
+            # Convert the timestamp in seconds
+            timestamp = int(self.timestamp_message_unix / 1000)
+
+            # Schedule the validation of the first half of the data
+            asyncio.create_task(
+                self.validate_data(
+                    timestamp,
+                    galileo_data_in_bytes[0:15],
+                    raw_sv_id,
+                )
+            )
+
+            # Schedule the validation of the second half of the data
+            asyncio.create_task(
+                self.validate_data(timestamp + 1, galileo_data_in_bytes[15:], raw_sv_id)
+            )
 
         # Check if we are under attack
         if self.attack:
@@ -266,6 +316,117 @@ class DataParser:
         galileo_data = wordA + wordB + wordC + wordD + wordE + wordF + wordG + wordH
 
         return galileo_data.hex()
+
+    async def validate_data(self, timestamp: int, data: bytes, satellite_id: int):
+        """
+        Validate data and store them internally
+
+        :param timestamp: reception of the message time in seconds
+        :param data: data to validate
+        :param satellite_id: Identifier of the satellite
+        """
+
+        # Get the event loop
+        loop = asyncio.get_running_loop()
+
+        # Validate the data and store them
+        validated = await loop.run_in_executor(self.executor, self.convolution, data)
+        await self._store_internally_data(timestamp, validated, satellite_id)
+
+    async def _store_internally_data(
+        self, timestamp: int, data: str, satellite_id: int
+    ):
+        """
+        Inner function to check the data to store
+        """
+
+        # Add data in the internal memory
+        self.valid_data_to_store[timestamp].append(Validated(satellite_id, data))
+
+        # Check if we have enough elements stored in memory
+        if len(self.valid_data_to_store) == 60:
+            # from Python3.7+ dicts are ordered by default
+            keys = list(self.valid_data_to_store.keys())[0:50]
+
+            # Data to store
+            store = {key: self.valid_data_to_store[key] for key in keys}
+
+            # Clean the internal storage
+            for key in keys:
+                del self.valid_data_to_store[key]
+
+            # store data in a file
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                self.executor, self.store_validated_data_in_file, store
+            )
+
+    def store_validated_data_in_file(self, data_to_store: Dict[int, List[Validated]]):
+        """
+        Store validated data in a file
+        :return:
+        """
+        with open(self.file_path, "a") as fp:
+            for timestamp in data_to_store:
+                for data in data_to_store[timestamp]:
+                    fp.write(f"{timestamp},{data.satellite_id},{data.data_validated}\n")
+
+    @staticmethod
+    def convolution(data: bytes) -> str:
+        """
+        Convolution of the input data
+        :param data: input data
+        :return: data convolved in hex format
+        """
+        convert_data_in_bits = bitarray()
+        convert_data_in_bits.frombytes(data)
+
+        g = np.array([[1, 1, 1, 1, 0, 0, 1], [1, 0, 1, 1, 0, 1, 1]], bool)
+
+        n, K = g.shape
+        m = K - 1
+
+        state = np.zeros(6, bool)
+
+        inputx: np.array = np.array(convert_data_in_bits.tolist(), bool)
+        h = inputx.shape[0]
+
+        outputy = np.zeros(240, bool)
+        output = np.zeros(2, bool)
+
+        for x in range(h):
+            input_data = inputx[x]
+
+            for i in range(n):
+                output[i] = g[i][0] * input_data
+                for j in range(1, K):
+                    output[i] = np.logical_xor(output[i], g[i, j] * state[j - 1])
+
+            state[1:] = state[: m - 1]
+            state[0] = input_data
+
+            output[1] = np.logical_not(output[1])
+            outputy[x * 2] = output[0]
+            outputy[(x * 2) + 1] = output[1]
+
+        n_col = 30
+        n_row = 8
+
+        interleaver = np.zeros((n_row, n_col), bool)
+
+        for col in range(n_col):
+            interleaver[:, col] = outputy[col * n_row : (col * n_row) + n_row]
+
+        interleaved = np.zeros(256, bool)
+        sinc = np.array([0, 1, 0, 1, 1, 0, 0, 0, 0, 0], bool)
+        interleaved[:10] = sinc[:]
+
+        for row in range(n_row):
+            interleaved[10 + row * n_col : 10 + (row * n_col) + n_col] = interleaver[
+                row, :
+            ]
+
+        return bitarray(interleaved.tolist()).tobytes().hex()
 
 
 # ------------------------------------------------------------------------------

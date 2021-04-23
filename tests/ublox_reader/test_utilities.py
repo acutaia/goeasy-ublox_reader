@@ -54,6 +54,7 @@ __docformat__ = "restructuredtext en"
 
 # ------------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def event_loop():
     """
@@ -74,25 +75,30 @@ class TestUtilities:
         Test the time message utility adjust second
         """
         assert timestampMessage_unix == DataParser.adjust_second(
-            ((raw_galWno * 604800 + raw_galTow) * 1000 + 935280000000) - (raw_leapS * 1000)
+            ((raw_galWno * 604800 + raw_galTow) * 1000 + 935280000000)
+            - (raw_leapS * 1000)
         ), "Error adjusting time"
-        assert timestampMessage_galileo == DataParser.adjust_second((raw_galWno * 604800 + raw_galTow)), \
-            "Error adjusting time"
+        assert timestampMessage_galileo == DataParser.adjust_second(
+            (raw_galWno * 604800 + raw_galTow)
+        ), "Error adjusting time"
 
     def test_read_auth_bits(self):
         """
         Test if the auth_bits were read correctly
         """
         # Test read_auth_bit utility
-        assert DataParser.read_auth_bits(TEST_AUTH_BYTES) == 0, "For this payload the 40 bits must be all zero"
+        assert (
+            DataParser.read_auth_bits(TEST_AUTH_BYTES) == 0
+        ), "For this payload the 40 bits must be all zero"
 
     def test_extract_galileo_data(self):
         """
         Test if the galileo data are extracted correctly
         """
-        assert DataParser.extract_galileo_data(
-            UBLOX_MESSAGE_PAYLOAD[12:44]
-        ) == GALILEO_MESSAGE_PAYLOAD, "Error during the extraction"
+        assert (
+            DataParser.extract_galileo_data(UBLOX_MESSAGE_PAYLOAD[12:44])
+            == GALILEO_MESSAGE_PAYLOAD
+        ), "Error during the extraction"
 
     def test_parse_messages(self):
         """
@@ -110,7 +116,7 @@ class TestUtilities:
         table, data_to_store = data_parser.parse_message(UBLOX_MESSAGE_PAYLOAD)
 
         # Check if the data were parsed correctly
-        assert table == f'{year}_Italy_{raw_svId}', "Error generating the table"
+        assert table == f"{year}_Italy_{raw_svId}", "Error generating the table"
         # Check timestamp
         assert data_to_store[1] == timestampMessage_unix, "Wrong unix time stamp"
         # Check time of the week
@@ -120,9 +126,13 @@ class TestUtilities:
         # Check leap seconds
         assert data_to_store[4] == raw_leapS, "raw_leapS wrong"
         # Check ublox_data
-        assert data_to_store[5] == UBLOX_MESSAGE_PAYLOAD.hex(), "Error converting the bytes in a hex string"
+        assert (
+            data_to_store[5] == UBLOX_MESSAGE_PAYLOAD.hex()
+        ), "Error converting the bytes in a hex string"
         # Check galileo_data
-        assert data_to_store[6] == GALILEO_MESSAGE_PAYLOAD, "Error converting the bytes in a hex string"
+        assert (
+            data_to_store[6] == GALILEO_MESSAGE_PAYLOAD
+        ), "Error converting the bytes in a hex string"
         # Check auth_bits as integer
         assert data_to_store[7] == raw_auth, "Error converting auth_bits in a integer"
         # Check service id
@@ -148,9 +158,27 @@ class TestUtilities:
         """
         # Instantiate Data Parser utility class
         data_parser = DataParser()
-        data_parser.parse_clock_message(b'\x01"\x14\x00\x10\x0e0\x110j\n\x00\x99\x00\x00\x00\x08\x00\x00\x00g\x03\x00\x00E|')
-        data_parser.parse_clock_message(b'\x01"\x14\x00\xf8\x110\x11\xc9j\n\x00\x99\x00\x00\x00\x08\x00\x00\x00\x8c\x03\x00\x00\xee\xf9')
+        data_parser.parse_clock_message(
+            b'\x01"\x14\x00\x10\x0e0\x110j\n\x00\x99\x00\x00\x00\x08\x00\x00\x00g\x03\x00\x00E|'
+        )
+        data_parser.parse_clock_message(
+            b'\x01"\x14\x00\xf8\x110\x11\xc9j\n\x00\x99\x00\x00\x00\x08\x00\x00\x00\x8c\x03\x00\x00\xee\xf9'
+        )
         assert data_parser.attack is False, "Those data are consecutive"
 
-        data_parser.parse_clock_message(b'\x01"\x14\x00`s\x93\x11\xff\xc1\xfe\xff\x10\xfb\xff\xff\x03\x00\x00\x00\x8d\x00\x00\x00\x046')
+        data_parser.parse_clock_message(
+            b'\x01"\x14\x00`s\x93\x11\xff\xc1\xfe\xff\x10\xfb\xff\xff\x03\x00\x00\x00\x8d\x00\x00\x00\x046'
+        )
         assert data_parser.attack is True, "Those data aren't consecutive"
+
+    def test_convolution(self):
+        """
+        Test if the convolution is correct
+        """
+        data_parser = DataParser()
+        assert (
+            data_parser.convolution(
+                b"\xff\xf0\xcc\xaa\x00\x0f3U\xe3\xec\xdf\x8a\x1c\x13@"
+            )
+            == "582817e33c17a80678ea1413d5de21beb9e607f8827d8271d825d231b641ce80"
+        ), "Incorrect convolution"
