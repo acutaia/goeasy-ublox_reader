@@ -29,7 +29,6 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
-from itertools import islice
 import logging
 import time
 from typing import Union, List, Dict
