@@ -145,6 +145,14 @@ class DataParser:
         )
         if not self.first_timestamp_galileo:
             self.first_timestamp_galileo = self.timestamp_message_galileo
+            with open(self.file_path, "w") as fp:
+                fp.write("# FILE_VERSION = 1\n")
+                fp.write("# NAV_TYPE = GAL_E1_INAV\n")
+                fp.write("# BIT_TYPE = MESSAGE_SYMBOLS\n")
+                fp.write("# FRAME_LENGTH_BITS = 250\n")
+                fp.write("# FRAME_LENGTH_TIME = 1\n")
+                fp.write("# BIT_ORDER = MSB_FIRST\n")
+                fp.write(f"# START_TIME_TAG = {self.first_timestamp_galileo}\n")
 
     def parse_clock_message(self, data: bytes) -> None:
         """
