@@ -324,7 +324,9 @@ class DataParser:
 
         return galileo_data.hex()
 
-    async def validate_data(self, timestamp: int, first_part: bytes, second_part: bytes, satellite_id: int):
+    async def validate_data(
+        self, timestamp: int, first_part: bytes, second_part: bytes, satellite_id: int
+    ):
         """
         Validate data and store them internally
 
@@ -339,10 +341,16 @@ class DataParser:
 
         # Validate the data and store them
         async with self.internal_lock:
-            validated_first = await loop.run_in_executor(self.executor, self.convolution, first_part)
+            validated_first = await loop.run_in_executor(
+                self.executor, self.convolution, first_part
+            )
             await self._store_internally_data(timestamp, validated_first, satellite_id)
-            validated_second = await loop.run_in_executor(self.executor, self.convolution, second_part)
-            await self._store_internally_data(timestamp + 1, validated_second, satellite_id)
+            validated_second = await loop.run_in_executor(
+                self.executor, self.convolution, second_part
+            )
+            await self._store_internally_data(
+                timestamp + 1, validated_second, satellite_id
+            )
 
     async def _store_internally_data(
         self, timestamp: int, data: str, satellite_id: int
@@ -369,7 +377,7 @@ class DataParser:
             # store data in a file
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
-            self.executor, self.store_validated_data_in_file, store
+                self.executor, self.store_validated_data_in_file, store
             )
 
     def store_validated_data_in_file(self, data_to_store: Dict[int, List[Validated]]):
