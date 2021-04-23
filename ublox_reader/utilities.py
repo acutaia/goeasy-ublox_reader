@@ -383,9 +383,9 @@ class DataParser:
         :return:
         """
         with open(self.file_path, "a") as fp:
-            for timestamp in data_to_store:
-                for data in data_to_store[timestamp]:
-                    fp.write(f"{timestamp},{data.satellite_id},{data.data_validated}\n")
+            for offset in data_to_store:
+                for data in data_to_store[offset]:
+                    fp.write(f"{offset},{data.satellite_id},{data.data_validated}\n")
 
     @staticmethod
     def convolution(data: bytes) -> str:
