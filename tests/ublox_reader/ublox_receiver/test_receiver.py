@@ -44,4 +44,3 @@ def test_run():
     Run a complete simulation of the UbloxReceiver
     """
     DummyUblox.run()
-

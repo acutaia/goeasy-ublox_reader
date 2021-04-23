@@ -59,18 +59,19 @@ class DataBase:
     The scope of this class is to build the database and save data inside it
     using a connection pool
     """
+
     # connection pool
     pool: asyncpg.pool.Pool = None
 
     def __init__(
-            self,
-            logger: Logger,
-            loop: Loop,
-            host: str,
-            port: int,
-            user: str,
-            password: str,
-            database: str
+        self,
+        logger: Logger,
+        loop: Loop,
+        host: str,
+        port: int,
+        user: str,
+        password: str,
+        database: str,
     ) -> None:
         """
         Setup Database
@@ -102,14 +103,14 @@ class DataBase:
 
     @classmethod
     async def setup(
-            cls,
-            logger,
-            loop,
-            host=DB_HOST,
-            port=DB_PORT,
-            user=DB_USER,
-            password=DB_PWD,
-            database=DB
+        cls,
+        logger,
+        loop,
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PWD,
+        database=DB,
     ):  # type: (Logger, Loop, str, int, str, str, str) -> DataBase
         """
         Create a database and setup a connection pool
@@ -165,9 +166,9 @@ class DataBase:
                     port=self.port,
                     user=self.user,
                     password=self.password,
-                    database=self.database
+                    database=self.database,
                 ),
-                timeout=self.timeout
+                timeout=self.timeout,
             )
             # Database Log
             self.logger.info(f"created a connection pool to {self.host}")
@@ -217,7 +218,7 @@ class DataBase:
         try:
             # Take a connection from the pool and execute the query
             await self.pool.execute(
-                f'''
+                f"""
                 INSERT INTO "{table}" (
                 receptiontime,
                 timestampmessage_unix,
@@ -235,8 +236,8 @@ class DataBase:
                 raw_ck_b_time,
                 osnma,
                 timestampmessage_galileo
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);''',
-                *data_to_store
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16);""",
+                *data_to_store,
             )
 
         # Check if the table does'nt exist
@@ -247,7 +248,7 @@ class DataBase:
             # Create the table
             async with self.pool.acquire() as con:
                 await con.execute(
-                    f'''
+                    f"""
                         CREATE TABLE IF NOT EXISTS "{table}" (
                         receptiontime bigint,
                         timestampmessage_unix bigint,
@@ -267,16 +268,16 @@ class DataBase:
                         osnma integer,
                         timestampmessage_galileo bigint
                         );
-                         '''
+                         """
                 )
                 # Log
                 self.logger.info(f"relation {table} created")
 
                 # Create a index for the table
                 await con.execute(
-                    f'''CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_timestampmessage_unix on "{table}"
-                     (timestampmessage_unix DESC NULLS LAST);'''
-                    )
+                    f"""CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_timestampmessage_unix on "{table}"
+                     (timestampmessage_unix DESC NULLS LAST);"""
+                )
 
             # store data in the new table
             await self.store_data(table, data_to_store)

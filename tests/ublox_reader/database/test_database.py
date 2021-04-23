@@ -68,6 +68,7 @@ class TestDataBase:
     """
     Test the postgresql module
     """
+
     # instantiate in this way to fix the warning
     loop: Union[uvloop.Loop, asyncio.AbstractEventLoop] = None
     # add logger
@@ -105,9 +106,9 @@ class TestDataBase:
             # Wrong user
             await DummyDataBase.setup(self.logger, self.loop, user="wrong")
 
-    #    with pytest.raises(DataBaseException):
-            # Wrong password
-    #        await DummyDataBase.setup(self.logger, self.loop, password="wrong")
+        #    with pytest.raises(DataBaseException):
+        # Wrong password
+        #        await DummyDataBase.setup(self.logger, self.loop, password="wrong")
 
         # Check if everything is ok
         database = await DummyDataBase.setup(self.logger, self.loop)
@@ -127,6 +128,3 @@ class TestDataBase:
         # Store data
         await database.store_data("test_table", DATA_TO_STORE)
         await database.close()
-
-
-

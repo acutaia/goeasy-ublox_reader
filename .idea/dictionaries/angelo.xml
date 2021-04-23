@@ -19,16 +19,20 @@
       <w>galwno</w>
       <w>gnss</w>
       <w>goeasy</w>
+      <w>inputx</w>
+      <w>interleaver</w>
       <w>levelname</w>
       <w>meaconing</w>
       <w>numwords</w>
       <w>osnma</w>
+      <w>outputy</w>
       <w>passwd</w>
       <w>postgre</w>
       <w>postgresql</w>
       <w>pseudoterminal</w>
       <w>receptiontime</w>
       <w>rendom</w>
+      <w>sinc</w>
       <w>svid</w>
       <w>timestampmessage</w>
       <w>ublox</w>

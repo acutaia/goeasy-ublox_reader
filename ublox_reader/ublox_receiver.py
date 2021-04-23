@@ -67,6 +67,7 @@ class UbloxReceiver:
     inserting in a PostgreSQL db the data
     retrieved from the serial connection
     """
+
     # Data_to_store tuple
     data_to_store: tuple = None
     # Connection pool to the db
@@ -106,7 +107,9 @@ class UbloxReceiver:
 
         try:
             # Setup the Reader
-            ublox_reader: UbloxReceiver = loop.run_until_complete(UbloxReceiver.set_up(loop))
+            ublox_reader: UbloxReceiver = loop.run_until_complete(
+                UbloxReceiver.set_up(loop)
+            )
 
         except (DataBaseException, UbloxSerialException):
             # Something went wrong
@@ -117,7 +120,8 @@ class UbloxReceiver:
         # Add signals handler to close gracefully the receiver
         for s in signals:
             loop.add_signal_handler(
-                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections()))
+                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections())
+            )
 
         # Set an exception handler to deal with the raised exceptions
         loop.set_exception_handler(ublox_reader.handle_exception)
@@ -244,8 +248,7 @@ class UbloxReceiver:
         Cancel all pending tasks
         """
         # Pending tasks
-        pending = [t for t in asyncio.all_tasks() if t is not
-                   asyncio.current_task()]
+        pending = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
         # Cancel all pending tasks
         [task.cancel() for task in pending]

@@ -66,6 +66,7 @@ class FakeSerialReceiver:
     A class that simulates the  serial connection and the
     behaviour of the SerialReceiver
     """
+
     # serial connection
     serial: SerialReceiver = None
 
@@ -123,7 +124,9 @@ class FakeSerialReceiver:
         """
         # Check if the setup bytes are received well
         for i in range(len(SETUP_BYTES)):
-            assert os.read(master, len(SETUP_BYTES[i])) == SETUP_BYTES[i], "Bytes read should be equal to SETUP_BYTES"
+            assert (
+                os.read(master, len(SETUP_BYTES[i])) == SETUP_BYTES[i]
+            ), "Bytes read should be equal to SETUP_BYTES"
 
         # Check if the simulation will be complete
         if self.simulate == "all":
@@ -134,7 +137,7 @@ class FakeSerialReceiver:
                     if not self.stop_event.is_set():
                         os.write(master, bytearray.fromhex(line))
                         # sleep to have a correct number of messages send in one second
-                        time.sleep(1/msg_per_second)
+                        time.sleep(1 / msg_per_second)
 
     async def ublox_message(self) -> AsyncIterable[bytearray]:
         """
@@ -157,7 +160,3 @@ class FakeSerialReceiver:
         # set stop event and await the thread to finish it's job
         self.stop_event.set()
         self.start_simulation.join()
-
-
-
-

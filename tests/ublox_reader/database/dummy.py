@@ -56,16 +56,17 @@ class DummyDataBase(DataBase):
     A class that simulates the behaviour of
     the DataBase
     """
-    @ classmethod
+
+    @classmethod
     async def setup(
-            cls,
-            logger,
-            loop,
-            host="localhost",
-            port=5432,
-            user="postgres",
-            password="postgres",
-            database="test_database"
+        cls,
+        logger,
+        loop,
+        host="localhost",
+        port=5432,
+        user="postgres",
+        password="postgres",
+        database="test_database",
     ):  # type: (Logger, Loop, str, int, str, str, str) -> DataBase
         """
         Create a database and setup a connection pool
@@ -90,7 +91,7 @@ class DummyDataBase(DataBase):
             port=port,
             user=user,
             password=password,
-            database=database
+            database=database,
         )
 
         # Assign the pool
@@ -110,9 +111,7 @@ class DummyDataBase(DataBase):
             database="template1",
         )
         # delete the database
-        await sys_conn.execute(
-            f'DROP DATABASE {self.database};'
-        )
+        await sys_conn.execute(f"DROP DATABASE {self.database};")
         # close the connection
         await sys_conn.close()
 

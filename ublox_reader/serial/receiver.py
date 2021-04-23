@@ -32,7 +32,13 @@ from aioserial import AioSerial, SerialException
 from uvloop import Loop
 
 # constants
-from .constants import SERIAL_PORT, SETUP_BYTES, SERIAL_BAUDRATE, DELIMETER, UbloxSerialException
+from .constants import (
+    SERIAL_PORT,
+    SETUP_BYTES,
+    SERIAL_BAUDRATE,
+    DELIMETER,
+    UbloxSerialException,
+)
 
 # ------------------------------------------------------------------------------
 
@@ -58,13 +64,8 @@ class SerialReceiver(AioSerial):
     Ubolox Receiver, reading the data following the
     format of the ublox communication protocol
     """
-    def __init__(
-            self,
-            logger: Logger,
-            loop: Loop,
-            port: str,
-            baudrate: int
-    ) -> None:
+
+    def __init__(self, logger: Logger, loop: Loop, port: str, baudrate: int) -> None:
         """
         Setup a SerialReceiver
 
@@ -206,7 +207,11 @@ class SerialReceiver(AioSerial):
                 message.extend(await self.read_async(4))
 
                 # Save the payload of the message and the two final bytes (checksum)
-                message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
+                message.extend(
+                    await self.read_async(
+                        (int.from_bytes(message[2:], byteorder="little") + 2)
+                    )
+                )
                 # Give the message
                 yield bytes(message)
 
@@ -228,7 +233,11 @@ class SerialReceiver(AioSerial):
                 message.extend(await self.read_async(4))
 
                 # Save the payload of the message and the two final bytes (checksum)
-                message.extend(await self.read_async((int.from_bytes(message[2:], byteorder="little") + 2)))
+                message.extend(
+                    await self.read_async(
+                        (int.from_bytes(message[2:], byteorder="little") + 2)
+                    )
+                )
                 # Give the message
                 yield bytes(message)
 

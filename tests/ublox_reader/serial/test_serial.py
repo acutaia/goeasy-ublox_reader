@@ -37,8 +37,12 @@ import uvloop
 
 
 # FakeSerialReceiver
-from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver, UbloxSerialException
+from tests.ublox_reader.serial.fake_serial import (
+    FakeSerialReceiver,
+    UbloxSerialException,
+)
 from tests.constants import FAKE_DATA
+
 # Logger
 from ublox_reader.utilities import UbloxLogger
 
@@ -70,6 +74,7 @@ class TestSerial:
     """
     Test the receiver module
     """
+
     # instantiate in this way to fix the warning
     loop: Union[uvloop.Loop, asyncio.AbstractEventLoop] = None
     # add logger
@@ -116,10 +121,14 @@ class TestSerial:
 
         # check if the setup raise an exception
         with pytest.raises(UbloxSerialException):
-            await FakeSerialReceiver.setup(self.logger, self.loop, simulate="setup", port="wrong")
+            await FakeSerialReceiver.setup(
+                self.logger, self.loop, simulate="setup", port="wrong"
+            )
 
         # Check if everything is ok
-        receiver = await FakeSerialReceiver.setup(self.logger, self.loop, simulate="setup")
+        receiver = await FakeSerialReceiver.setup(
+            self.logger, self.loop, simulate="setup"
+        )
 
         # stop the fake receiver
         await receiver.stop_serial()

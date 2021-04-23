@@ -35,6 +35,7 @@ from uvloop import Loop
 from ublox_reader.ublox_receiver import UbloxReceiver, UbloxLogger
 from tests.ublox_reader.serial.fake_serial import FakeSerialReceiver
 from tests.ublox_reader.database.dummy import DummyDataBase
+
 # Exceptions
 from ublox_reader.serial.constants import UbloxSerialException
 from ublox_reader.database.constants import DataBaseException
@@ -63,6 +64,7 @@ class DummyUblox(UbloxReceiver):
     A class that simulates the behaviour of
     the UbloxReceiver
     """
+
     # Database
     db: DummyDataBase = None
     # Logger
@@ -98,7 +100,8 @@ class DummyUblox(UbloxReceiver):
         # Add signals handler to close gracefully the receiver
         for s in signals:
             loop.add_signal_handler(
-                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections()))
+                s, lambda x=s: asyncio.create_task(ublox_reader.close_all_connections())
+            )
 
         # Set an exception handler to deal with the raised exceptions
         loop.set_exception_handler(ublox_reader.handle_exception)

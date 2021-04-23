@@ -69,7 +69,9 @@ DB_PWD = config.get("POSTGRESQL", "PWD")
 
 class DataBaseException(Exception):
     """Base class for database errors"""
+
     def __init__(self, *args, **kwargs):  # real signature unknown
         pass
+
 
 # ------------------------------------------------------------------------------
