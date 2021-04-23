@@ -111,6 +111,7 @@ class DataParser:
     file_path: str = config.get("VALIDATION", "PATH")
     validation_active: bool = config.getboolean("VALIDATION", "ACTIVE")
     if validation_active:
+        internal_lock: asyncio.Lock = asyncio.Lock()
         executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=3)
         valid_data_to_store: Dict[int, List[Validated]] = defaultdict(list)
 
@@ -240,13 +241,9 @@ class DataParser:
                 self.validate_data(
                     timestamp,
                     galileo_data_in_bytes[0:15],
+                    galileo_data_in_bytes[15:],
                     raw_sv_id,
                 )
-            )
-
-            # Schedule the validation of the second half of the data
-            asyncio.create_task(
-                self.validate_data(timestamp + 1, galileo_data_in_bytes[15:], raw_sv_id)
             )
 
         # Check if we are under attack
@@ -327,12 +324,13 @@ class DataParser:
 
         return galileo_data.hex()
 
-    async def validate_data(self, timestamp: int, data: bytes, satellite_id: int):
+    async def validate_data(self, timestamp: int, first_part: bytes, second_part: bytes, satellite_id: int):
         """
         Validate data and store them internally
 
         :param timestamp: reception of the message time in seconds
-        :param data: data to validate
+        :param first_part: data to validate
+        :param second_part: data to validate
         :param satellite_id: Identifier of the satellite
         """
 
@@ -340,8 +338,11 @@ class DataParser:
         loop = asyncio.get_running_loop()
 
         # Validate the data and store them
-        validated = await loop.run_in_executor(self.executor, self.convolution, data)
-        await self._store_internally_data(timestamp, validated, satellite_id)
+        async with self.internal_lock:
+            validated_first = await loop.run_in_executor(self.executor, self.convolution, first_part)
+            await self._store_internally_data(timestamp, validated_first, satellite_id)
+            validated_second = await loop.run_in_executor(self.executor, self.convolution, second_part)
+            await self._store_internally_data(timestamp + 1, validated_second, satellite_id)
 
     async def _store_internally_data(
         self, timestamp: int, data: str, satellite_id: int
@@ -354,7 +355,7 @@ class DataParser:
         self.valid_data_to_store[timestamp].append(Validated(satellite_id, data))
 
         # Check if we have enough elements stored in memory
-        if len(self.valid_data_to_store) == 60:
+        if len(self.valid_data_to_store.keys()) == 60:
             # from Python3.7+ dicts are ordered by default
             keys = list(self.valid_data_to_store.keys())[0:50]
 
@@ -368,7 +369,7 @@ class DataParser:
             # store data in a file
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(
-                self.executor, self.store_validated_data_in_file, store
+            self.executor, self.store_validated_data_in_file, store
             )
 
     def store_validated_data_in_file(self, data_to_store: Dict[int, List[Validated]]):
