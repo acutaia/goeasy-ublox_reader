@@ -234,12 +234,12 @@ class DataParser:
             galileo_data_in_bytes = bytes.fromhex(galileo_data)
 
             # Convert the timestamp in seconds
-            timestamp = self.timestamp_message_galileo - self.first_timestamp_galileo
+            offset = self.timestamp_message_galileo - self.first_timestamp_galileo
 
             # Schedule the validation of the first half of the data
             asyncio.create_task(
                 self.validate_data(
-                    timestamp,
+                    offset,
                     galileo_data_in_bytes[:15],
                     raw_sv_id,
                 )
@@ -247,7 +247,7 @@ class DataParser:
 
             asyncio.create_task(
                 self.validate_data(
-                    timestamp + 1,
+                    offset + 1,
                     galileo_data_in_bytes[15:],
                     raw_sv_id,
                 )
@@ -331,11 +331,11 @@ class DataParser:
 
         return galileo_data.hex()
 
-    async def validate_data(self, timestamp: int, data: bytes, satellite_id: int):
+    async def validate_data(self, offset: int, data: bytes, satellite_id: int):
         """
         Validate data and store them internally
 
-        :param timestamp: reception of the message time in seconds
+        :param offset: message offset
         :param data: data to validate
         :param satellite_id: Identifier of the satellite
         """
@@ -345,7 +345,7 @@ class DataParser:
 
         # Validate the data and store them
         validated = await loop.run_in_executor(self.executor, self.convolution, data)
-        await self._store_internally_data(timestamp, validated, satellite_id)
+        await self._store_internally_data(offset, validated, satellite_id)
 
     async def _store_internally_data(
         self, timestamp: int, data: str, satellite_id: int
@@ -358,11 +358,11 @@ class DataParser:
         self.valid_data_to_store[timestamp].append(Validated(satellite_id, data))
 
         # Check if we have enough elements stored in memory
-        if len(self.valid_data_to_store.keys()) == 60:
+        if len(self.valid_data_to_store) == 30:
 
             # Store offset value
             old_offset = self.offset
-            self.offset += 50
+            self.offset += 20
 
             # Data to store
             store = {key: self.valid_data_to_store[key] for key in range(old_offset, self.offset)}
