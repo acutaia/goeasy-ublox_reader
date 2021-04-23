@@ -144,7 +144,7 @@ class DataParser:
         self.timestamp_message_galileo = DataParser.adjust_second(
             (self.raw_gal_wno * 604800 + self.raw_gal_tow)
         )
-        if not self.first_timestamp_galileo:
+        if not self.first_timestamp_galileo and self.validation_active:
             self.first_timestamp_galileo = self.timestamp_message_galileo
             with open(self.file_path, "w") as fp:
                 fp.write("# FILE_VERSION = 1\n")
