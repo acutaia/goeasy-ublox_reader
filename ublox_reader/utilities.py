@@ -91,6 +91,7 @@ class DataParser:
     reception_time: float = None
     timestamp_message_unix: float = None
     timestamp_message_galileo: int = None
+    first_timestamp_galileo: int = None
 
     # Galielo
     raw_gal_tow: int = None
@@ -143,6 +144,8 @@ class DataParser:
         self.timestamp_message_galileo = DataParser.adjust_second(
             (self.raw_gal_wno * 604800 + self.raw_gal_tow)
         )
+        if not self.first_timestamp_galileo:
+            self.first_timestamp_galileo = self.timestamp_message_galileo
 
     def parse_clock_message(self, data: bytes) -> None:
         """
@@ -223,7 +226,7 @@ class DataParser:
             galileo_data_in_bytes = bytes.fromhex(galileo_data)
 
             # Convert the timestamp in seconds
-            timestamp = int(self.timestamp_message_unix / 1000)
+            timestamp = self.timestamp_message_galileo - self.first_timestamp_galileo
 
             # Schedule the validation of the first half of the data
             asyncio.create_task(
