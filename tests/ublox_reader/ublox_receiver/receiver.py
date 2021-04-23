@@ -96,7 +96,6 @@ class DummyUblox(UbloxReceiver):
             ublox_reader.parser.executor = ThreadPoolExecutor(max_workers=3)
             ublox_reader.parser.file_path = "convolved_data.txt"
             ublox_reader.parser.valid_data_to_store = defaultdict(list)
-            ublox_reader.parser.internal_lock = asyncio.Lock()
 
         except (DataBaseException, UbloxSerialException):
             # Something went wrong
