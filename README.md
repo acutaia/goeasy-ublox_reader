@@ -5,4 +5,3 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7|3.8|3.9-blue.svg)](https://www.python.org/downloads/release)
 
 ![image](img/logo_full.png)
-
