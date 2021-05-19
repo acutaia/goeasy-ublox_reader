@@ -1,4 +1,4 @@
-# GoEasy
+# UbloxReader
 [![Build Status](https://travis-ci.org/acutaia/goeasy-ublox_reader.svg?branch=main)](https://travis-ci.org/acutaia/goeasy-ublox_reader)
 [![codecov](https://codecov.io/gh/acutaia/goeasy-ublox_reader/branch/main/graph/badge.svg?token=ELSYC98HHS)](https://codecov.io/gh/acutaia/goeasy-ublox_reader)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
