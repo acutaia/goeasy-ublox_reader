@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Settings for Ublox Reader package
 

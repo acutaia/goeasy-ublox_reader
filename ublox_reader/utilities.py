@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Utility methods for Ublox Receiver
 

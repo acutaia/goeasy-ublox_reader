@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Fake ublox_reader.serial.receiver.SerialReceiver
 
