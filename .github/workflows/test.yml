@@ -45,7 +45,7 @@ jobs:
           flake8 ublox_reader/
       - name: Check Black format
         run: |
-          black app tests --check
+          black ublox_reader tests --check
       - name: Test with pytest
         run: |
            pytest --cov=ublox_reader --cov-report=xml tests
