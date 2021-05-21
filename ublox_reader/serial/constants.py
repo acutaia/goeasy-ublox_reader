@@ -129,7 +129,7 @@ SETUP_BYTES = [
     bytes([0xB5, 0x62, 0x06, 0x01, 0x03, 0x00, 0x01, 0x22, 0x01, 0x2E, 0x87]),
 ]
 """
-Bytes used to setup the Serial Receiver in order to disable/enable 
+Bytes used to setup the Serial Receiver in order to disable/enable
 a specific message
 """
 
