@@ -6,6 +6,7 @@ uvloop>=0.15.2
 numpy>=1.20.3
 
 # Testing
+flake8
 pytest>=6.2.2
 pytest-asyncio>=0.14.0
 pytest-cov>=2.11.1
