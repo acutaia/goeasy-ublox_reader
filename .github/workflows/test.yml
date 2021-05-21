@@ -42,7 +42,7 @@ jobs:
           pip install -r requirements.txt
       - name: Lint with flake8
         run: |
-          flake8 app/
+          flake8 ublox_reader/
       - name: Test with pytest
         run: |
            pytest --cov=app --cov-report=xml tests
