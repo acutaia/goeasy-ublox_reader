@@ -78,9 +78,10 @@ setup(
     packages=find_packages(include=['ublox_reader', 'ublox_reader.*']),
     install_requires=[
         'aioserial>=1.3.0',
-        'asyncpg>=0.21.0',
-        'bitarray>=1.5.3',
-        'uvloop>=0.14.0'
+        'asyncpg>=0.23.0',
+        'bitarray>=2.0.1',
+        'uvloop>=0.15.0',
+        'numpy'
     ],
     include_package_data=True,
     download_url='',
