@@ -81,7 +81,7 @@ setup(
         'asyncpg>=0.23.0',
         'bitarray>=2.0.1',
         'uvloop>=0.15.0',
-        'numpy'
+        'numpy>=1.20.3'
     ],
     include_package_data=True,
     download_url='',
