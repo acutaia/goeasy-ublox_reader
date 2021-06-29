@@ -1,4 +1,4 @@
-![image](https://raw.githubusercontent.com/acutaia/goeasy-ublox_reader/main/docs/docs/img/logo_full.png)
+![image](https://raw.githubusercontent.com/acutaia/goeasy-ublox_reader/docs/docs/img/logo_full.png)
 
 [![Test](https://github.com/acutaia/goeasy-ublox_reader/actions/workflows/test.yml/badge.svg)](https://github.com/acutaia/goeasy-ublox_reader/actions/workflows/test.yml)
 [![Build Docs](https://github.com/acutaia/goeasy-ublox_reader/actions/workflows/build_docs.yml/badge.svg)](https://github.com/acutaia/goeasy-ublox_reader/actions/workflows/build_docs.yml)
